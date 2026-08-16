@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- A slit, and the spectrum it throws. -->
+  <rect width="32" height="32" rx="6" fill="#08536b"/>
+  <rect x="5" y="7" width="3" height="18" rx="1.5" fill="#f7f8fa"/>
+  <defs>
+    <linearGradient id="e" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b3fbf"/>
+      <stop offset="0.22" stop-color="#2f6fd0"/>
+      <stop offset="0.45" stop-color="#2fb673"/>
+      <stop offset="0.68" stop-color="#e8d34a"/>
+      <stop offset="1" stop-color="#d9463c"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="11" width="16" height="10" rx="2" fill="url(#e)"/>
+</svg>

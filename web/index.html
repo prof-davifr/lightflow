@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LightFlow — webcam spectrometer</title>
+<link rel="stylesheet" href="vendor/uPlot.min.css">
+<link rel="stylesheet" href="lightflow.css">
+</head>
+<body>
+
+<header id="barra">
+  <h1>LightFlow</h1>
+  <nav id="abas">
+    <button data-tela="camera" class="ativa">Camera</button>
+    <button data-tela="espectro">Spectrum</button>
+    <button data-tela="calibracao">Calibration</button>
+    <button data-tela="cinetica">Kinetics</button>
+    <button data-tela="dados">Data</button>
+    <button data-tela="ajuda">Help</button>
+  </nav>
+  <div id="selos">
+    <span id="selo-camera" class="selo">no camera</span>
+    <span id="selo-trava" class="selo mau">unlocked</span>
+    <span id="selo-satur" class="selo">—</span>
+    <span id="selo-cal" class="selo">uncalibrated</span>
+    <span id="selo-taxa" class="selo">—</span>
+  </div>
+</header>
+
+<div id="corpo">
+
+<aside id="painel">
+  <h2>Camera</h2>
+  <div class="campo">
+    <label for="dispositivo" data-termo="device">Device</label>
+    <select id="dispositivo"><option value="">— none —</option></select>
+  </div>
+  <div class="campo">
+    <label for="resolucao">Resolution</label>
+    <select id="resolucao">
+      <option value="1280x800">1280 × 800</option>
+      <option value="1280x720" selected>1280 × 720</option>
+      <option value="800x600">800 × 600</option>
+      <option value="640x480">640 × 480</option>
+    </select>
+  </div>
+  <div class="linha-bt">
+    <button id="bt-abrir" class="primario">Open</button>
+    <button id="bt-fechar">Close</button>
+  </div>
+
+  <fieldset>
+    <legend data-termo="lock">Lock</legend>
+    <div class="campo">
+      <label for="exposicao">Exposure</label>
+      <input id="exposicao" type="range" min="0" max="100" value="30">
+      <span id="exposicao-val" class="val">—</span>
+    </div>
+    <div class="campo">
+      <label for="temp-cor">White balance (K)</label>
+      <input id="temp-cor" type="range" min="2800" max="6500" step="10" value="4600">
+      <span id="temp-cor-val" class="val">4600</span>
+    </div>
+    <div class="linha-bt">
+      <button id="bt-travar" class="primario">Lock camera</button>
+    </div>
+    <p id="aviso-trava" class="aviso"></p>
+  </fieldset>
+
+  <h2>Measurement</h2>
+  <div class="campo">
+    <label for="canal" data-termo="channel">Channel</label>
+    <select id="canal">
+      <option value="g" selected>green — full resolution</option>
+      <option value="r">red — half resolution</option>
+      <option value="b">blue — half resolution</option>
+      <option value="lum">luminance mix</option>
+    </select>
+  </div>
+  <div class="campo">
+    <label for="modo" data-termo="mode">Mode</label>
+    <select id="modo">
+      <option value="absorbance" selected>Absorbance</option>
+      <option value="transmittance">Transmittance %</option>
+      <option value="emission">Emission</option>
+      <option value="fluorescence">Fluorescence</option>
+    </select>
+  </div>
+  <div class="campo">
+    <label for="media-n" data-termo="averaging">Frames to average</label>
+    <select id="media-n">
+      <option>1</option><option>4</option><option>8</option>
+      <option selected>16</option><option>32</option><option>64</option>
+    </select>
+  </div>
+  <div class="campo">
+    <label for="gama" data-termo="linearization">Linearization</label>
+    <select id="gama">
+      <option value="srgb" selected>inverse sRGB</option>
+      <option value="1">none (gamma 1)</option>
+      <option value="2.2">gamma 2.2</option>
+      <option value="1.8">gamma 1.8</option>
+    </select>
+  </div>
+</aside>
+
+<main id="telas">
+
+<!-- ------------------------------------------------------------- camera -->
+<section class="tela ativa" id="tela-camera">
+  <div class="cabeca">
+    <h2>Camera and region of interest</h2>
+    <button class="ajuda" data-ir="roi">?</button>
+  </div>
+  <div class="duas">
+    <div class="caixa">
+      <div id="palco">
+        <video id="video" playsinline muted></video>
+        <canvas id="sobreposto"></canvas>
+      </div>
+      <p class="nota">Drag inside the box to move it. Drag an edge to resize it.
+        Drag the round handle to rotate it.</p>
+    </div>
+    <div class="caixa">
+      <fieldset>
+        <legend data-termo="roi">Region of interest</legend>
+        <div class="campo"><label for="roi-x">Left (px)</label><input id="roi-x" type="number" step="1" value="0"></div>
+        <div class="campo"><label for="roi-y">Top (px)</label><input id="roi-y" type="number" step="1" value="330"></div>
+        <div class="campo"><label for="roi-w">Columns</label><input id="roi-w" type="number" step="1" value="1280"></div>
+        <div class="campo"><label for="roi-h" data-termo="binning">Rows binned</label><input id="roi-h" type="number" step="1" value="61"></div>
+        <div class="campo"><label for="roi-a">Angle (deg)</label><input id="roi-a" type="number" step="0.05" value="0"></div>
+        <div class="linha-bt">
+          <button id="bt-roi-centro">Centre on the stripe</button>
+          <button id="bt-roi-tudo">Full width</button>
+        </div>
+      </fieldset>
+      <h3>What the camera accepted</h3>
+      <table id="tab-capacidades" class="tabela"><tbody></tbody></table>
+    </div>
+  </div>
+  <div class="caixa cresce">
+    <h3>Raw column profile — linear intensity, uncalibrated</h3>
+    <div id="g-cru" class="grafico"></div>
+  </div>
+</section>
+
+<!-- ----------------------------------------------------------- spectrum -->
+<section class="tela" id="tela-espectro">
+  <div class="cabeca">
+    <h2>Spectrum</h2>
+    <span id="rot-modo" class="marca">—</span>
+    <span id="rot-amax" class="marca" data-termo="amax">—</span>
+    <button class="ajuda" data-ir="modes">?</button>
+  </div>
+  <div class="barra-acao">
+    <button id="bt-escuro" data-termo="dark">Capture dark</button>
+    <button id="bt-referencia" data-termo="reference">Capture reference</button>
+    <button id="bt-branco" data-termo="blank">Capture blank</button>
+    <span class="sep"></span>
+    <label class="caixinha"><input type="checkbox" id="ver-r"> R</label>
+    <label class="caixinha"><input type="checkbox" id="ver-g" checked> G</label>
+    <label class="caixinha"><input type="checkbox" id="ver-b"> B</label>
+    <label class="caixinha"><input type="checkbox" id="ver-lum"> lum</label>
+    <span class="sep"></span>
+    <button id="bt-salvar-espectro">Save spectrum</button>
+    <button id="bt-csv-espectro">CSV</button>
+  </div>
+  <div id="estado-quadros" class="tira"></div>
+  <div class="caixa cresce">
+    <div id="g-espectro" class="grafico"></div>
+  </div>
+  <div class="caixa">
+    <h3>Peaks</h3>
+    <table id="tab-picos" class="tabela">
+      <thead><tr><th>Wavelength</th><th>Value</th><th data-termo="fwhm">FWHM</th><th>Prominence</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- -------------------------------------------------------- calibration -->
+<section class="tela" id="tela-calibracao">
+  <div class="cabeca">
+    <h2>Wavelength calibration</h2>
+    <span id="rot-rms" class="marca">—</span>
+    <button class="ajuda" data-ir="calibration">?</button>
+  </div>
+  <div class="barra-acao">
+    <label for="preset">Reference source</label>
+    <select id="preset"></select>
+    <button id="bt-preset">Load its lines</button>
+    <span class="sep"></span>
+    <label for="ordem">Order</label>
+    <select id="ordem"><option>1</option><option selected>2</option><option>3</option></select>
+    <button id="bt-ajustar" class="primario">Fit</button>
+    <span class="sep"></span>
+    <button id="bt-cal-salvar">Save</button>
+    <button id="bt-cal-json">Export</button>
+    <button id="bt-cal-limpar">Clear points</button>
+  </div>
+  <p id="nota-preset" class="nota"></p>
+  <p id="aviso-cal" class="aviso"></p>
+  <div class="duas">
+    <div class="caixa cresce">
+      <h3>Click a peak to add a point</h3>
+      <div id="g-cal" class="grafico"></div>
+    </div>
+    <div class="caixa">
+      <h3>Points</h3>
+      <table id="tab-cal" class="tabela">
+        <thead><tr><th>Use</th><th>Column</th><th>nm</th><th>Line</th><th data-termo="residual">Residual</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="linha-bt">
+        <button id="bt-cal-adicionar">Add the strongest unused peak</button>
+      </div>
+      <h3>Saved calibrations</h3>
+      <table id="tab-cal-salvas" class="tabela"><tbody></tbody></table>
+    </div>
+  </div>
+  <div class="caixa">
+    <h3>Residuals (nm)</h3>
+    <div id="g-residuos" class="grafico baixo"></div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------ kinetics -->
+<section class="tela" id="tela-cinetica">
+  <div class="cabeca">
+    <h2>Reaction over time</h2>
+    <span id="rot-corrida" class="marca">not running</span>
+    <button class="ajuda" data-ir="kinetics">?</button>
+  </div>
+  <div class="barra-acao">
+    <button id="bt-corrida" class="primario">Start run</button>
+    <label for="intervalo">Interval (s)</label>
+    <input id="intervalo" type="number" min="0.2" step="0.2" value="2" class="curto">
+    <span class="sep"></span>
+    <label for="mapa">Colour</label>
+    <select id="mapa"><option value="casa">house</option><option value="viridis">viridis</option><option value="cinza">grey</option></select>
+    <label for="escala">Scale</label>
+    <select id="escala"><option value="auto" selected>auto</option><option value="manual">manual</option></select>
+    <input id="esp-min" type="number" step="0.05" value="0" class="curto" disabled>
+    <input id="esp-max" type="number" step="0.05" value="1" class="curto" disabled>
+    <span class="sep"></span>
+    <button id="bt-limpar-esp">Clear</button>
+  </div>
+  <div class="caixa cresce">
+    <div id="g-espectrograma" class="mapa">
+      <canvas id="esp-canvas"></canvas>
+      <canvas id="esp-eixos"></canvas>
+    </div>
+    <div id="leitura-esp" class="leitura"></div>
+  </div>
+  <div class="barra-acao">
+    <span id="rot-selecao" class="marca">drag on the map to select a time range</span>
+    <button id="bt-sel-exportar">Export the selection</button>
+    <button id="bt-sel-media">Average it as one spectrum</button>
+    <button id="bt-sel-limpar">Clear the selection</button>
+  </div>
+  <div class="caixa cresce">
+    <div class="cabeca">
+      <h3>Value against time</h3>
+      <label for="banda-nm">Band centre (nm)</label>
+      <input id="banda-nm" type="number" step="1" value="546" class="curto">
+      <label for="banda-larg">± (nm)</label>
+      <input id="banda-larg" type="number" step="0.5" value="5" class="curto">
+      <button id="bt-banda">Add band</button>
+      <button id="bt-banda-limpar">Remove all</button>
+    </div>
+    <div id="g-cinetica" class="grafico"></div>
+  </div>
+</section>
+
+<!-- --------------------------------------------------------------- data -->
+<section class="tela" id="tela-dados">
+  <div class="cabeca">
+    <h2>Sessions and export</h2>
+    <span id="rot-espaco" class="marca">—</span>
+    <button class="ajuda" data-ir="export">?</button>
+  </div>
+  <div class="barra-acao">
+    <button id="bt-recarregar">Refresh</button>
+    <button id="bt-persistir">Ask the browser to keep this data</button>
+  </div>
+  <div class="caixa cresce">
+    <table id="tab-sessoes" class="tabela">
+      <thead><tr><th>Session</th><th>Started</th><th>Spectra</th><th>Mode</th><th>Size</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- --------------------------------------------------------------- help -->
+<section class="tela" id="tela-ajuda">
+  <div class="cabeca"><h2>Help</h2></div>
+  <div class="caixa cresce" id="corpo-ajuda"></div>
+</section>
+
+</main>
+</div>
+
+<footer id="rodape">
+  <span id="mensagem">Choose a camera and press Open.</span>
+  <span id="contador" class="direita"></span>
+</footer>
+
+<script src="vendor/uPlot.iife.min.js"></script>
+<script src="js/util.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/roi.js"></script>
+<script src="js/screen_camera.js"></script>
+<script src="js/screen_spectrum.js"></script>
+<script src="js/screen_calibration.js"></script>
+<script src="js/spectrogram.js"></script>
+<script src="js/screen_kinetics.js"></script>
+<script src="js/screen_data.js"></script>
+<script src="js/help.js"></script>
+<script src="js/app.js"></script>
+<!-- A module script is deferred and a classic one is not, so this runs last of
+     all. It hands the pure core to LF and only then starts the screens; nothing
+     above may touch LF.nucleo at load time. -->
+<script type="module" src="js/nucleo/bridge.js"></script>
+</body>
+</html>

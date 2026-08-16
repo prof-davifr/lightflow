@@ -1,0 +1,57 @@
+# Publishes the LightFlow interface on GitHub Pages.
+#
+# WHAT GOES UP: only the `web` folder. That folder is the whole program — the
+# page talks to the camera through getUserMedia and does every calculation in
+# the browser, so there is nothing to run on a server and no server to run it.
+#
+# BEFORE TURNING THIS ON, in the repository: Settings > Pages > Source = GitHub
+# Actions. Without that step the workflow fails at `deploy-pages` with
+# "Pages not enabled".
+#
+# The tests run first and gate the publish. If the arithmetic in web/js/nucleo
+# does not pass, nothing is published: a stale page beats an instrument that
+# measures wrong.
+
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # No dependencies to install: the core is plain ES modules and the runner
+      # is the one built into Node.
+      - name: numerics, photometry, calibration and the file formats
+        run: node --test 'testes/**/*.mjs'
+
+  publica:
+    needs: testes
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deploy
+        uses: actions/deploy-pages@v4

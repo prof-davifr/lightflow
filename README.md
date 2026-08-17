@@ -45,6 +45,13 @@ Two constraints are worth knowing before you start.
 8. Put the sample in. To follow a reaction, go to **Kinetics** and press
    **Start run**.
 
+Every live plot has a **Y axis** control. On `auto` it refits itself to the data
+on every frame, which makes the trace swing and makes two spectra impossible to
+compare by eye. `fixed` pins it to the numbers you type, and **Freeze** copies
+whatever is on screen into those boxes and pins it there. Fix the axis before
+watching a band change. Switching the measurement mode releases it, because a
+range set for absorbance would hide transmittance entirely.
+
 The **Help** tab inside the program carries all of this, plus a glossary, the
 formula for each mode, and a troubleshooting table.
 

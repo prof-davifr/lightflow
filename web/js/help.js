@@ -63,6 +63,15 @@ LF.telas.ajuda = (function () {
         + "More rows means less noise, up to the point where the box starts "
         + "collecting rows that are not on the stripe.",
     },
+    yscale: {
+      rot: "Y axis",
+      txt: "On auto the axis refits itself to the data on every frame, which "
+        + "makes a live trace swing and makes two spectra impossible to compare "
+        + "by eye. Fixed pins it to the numbers you type. Freeze copies what is "
+        + "on screen right now into those boxes and pins it there, which is "
+        + "usually what you want. Changing the measurement mode releases it, "
+        + "because a range set for absorbance would hide transmittance.",
+    },
     dark: {
       rot: "Dark frame",
       txt: "What the camera reads with no light reaching it. Cover the slit and "

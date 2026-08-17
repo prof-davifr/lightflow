@@ -120,6 +120,88 @@ LF.faixa = function (lo, hi, extra) {
   return [lo - folga, hi + folga];
 };
 
+/* A number for an <input type="number">: plain digits, no thousands separator.
+   LF.num groups with commas so a person can read it, and `parseFloat("1,234.5")`
+   is 1 — which would silently collapse a fixed axis to nothing. */
+LF.numCru = function (v, casas) {
+  if (!isFinite(v)) return "";
+  return String(+v.toFixed(casas === undefined ? 4 : casas));
+};
+
+/* A y axis that can be pinned.
+
+   A live spectrum redrawn thirty times a second with an auto-fitted y axis
+   swings on every frame, because the axis follows the noise. Watching a band
+   grow or shrink is impossible while the scale grows and shrinks with it, and
+   two spectra cannot be compared by eye at all. So the axis has two states, and
+   a Freeze button that copies whatever is on screen right now into the fixed
+   boxes — which is the state the operator actually wants and the one that is
+   tedious to type. */
+LF.escalaY = function (opc) {
+  const e = {
+    modo: "auto", min: NaN, max: NaN, ultimo: [0, 1],
+    range: function (u, lo, hi) {
+      if (e.modo === "manual" && isFinite(e.min) && isFinite(e.max) && e.max > e.min) {
+        return [e.min, e.max];
+      }
+      const f = LF.faixa(lo, hi, opc && opc.faixa);
+      e.ultimo = f;
+      return f;
+    },
+  };
+  return e;
+};
+
+/* Wires an escalaY to a select, two number boxes and a Freeze button.
+   `redesenha` has to re-run the scale, so it should call setData rather than
+   redraw: uPlot only consults a scale's range function when the data changes. */
+LF.ligaEscalaY = function (e, sel, redesenha) {
+  const modo = LF.q(sel.modo), mn = LF.q(sel.min), mx = LF.q(sel.max);
+  const bt = sel.bt ? LF.q(sel.bt) : null;
+
+  function habilita() {
+    const manual = e.modo === "manual";
+    mn.disabled = !manual; mx.disabled = !manual;
+  }
+  function preenche() {
+    mn.value = LF.numCru(e.min); mx.value = LF.numCru(e.max);
+  }
+  /* Switching to fixed with empty boxes would blank the plot, so the current
+     view is adopted as the starting range. */
+  function garante() {
+    if (isFinite(e.min) && isFinite(e.max) && e.max > e.min) return;
+    e.min = e.ultimo[0]; e.max = e.ultimo[1];
+    preenche();
+  }
+
+  modo.addEventListener("change", function () {
+    e.modo = this.value;
+    if (e.modo === "manual") garante();
+    habilita(); redesenha();
+  });
+  [mn, mx].forEach(function (el) {
+    el.addEventListener("change", function () {
+      e.min = parseFloat(mn.value); e.max = parseFloat(mx.value);
+      redesenha();
+    });
+  });
+  if (bt) {
+    bt.addEventListener("click", function () {
+      e.min = e.ultimo[0]; e.max = e.ultimo[1];
+      e.modo = "manual"; modo.value = "manual";
+      preenche(); habilita(); redesenha();
+      LF.mensagem("y axis fixed at " + LF.num(e.min, 3) + " to " + LF.num(e.max, 3));
+    });
+  }
+  habilita();
+  e.solta = function () {
+    e.modo = "auto"; e.min = NaN; e.max = NaN;
+    modo.value = "auto"; mn.value = ""; mx.value = "";
+    habilita();
+  };
+  return e;
+};
+
 LF.serie = function (rotulo, cor, largura) {
   return {
     label: rotulo, stroke: cor, width: largura || 1.5,

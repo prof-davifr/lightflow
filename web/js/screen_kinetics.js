@@ -12,6 +12,7 @@ LF.telas.cinetica = (function () {
   let corrida = null, selecao = null;
   let bandas = [];
   let proximo = 0, t0Ocioso = 0;
+  const escY = LF.escalaY({ faixa: { inclui_zero: true } });
 
   function rodando() { return !!corrida; }
 
@@ -161,7 +162,7 @@ LF.telas.cinetica = (function () {
     plot = new uPlot({
       width: 600, height: 200,
       cursor: { drag: { x: true, y: false } },
-      scales: { x: { time: false } },
+      scales: { x: { time: false }, y: { range: escY.range } },
       axes: [LF.eixo("Time (s)", 0), LF.eixo(uni, "auto")],
       series: [{}].concat(bandas.map(function (b) {
         return LF.serie(LF.num(b.centro, 0) + " ± " + LF.num(b.largura / 2, 1) + " nm", b.cor);
@@ -262,10 +263,19 @@ LF.telas.cinetica = (function () {
     if (plot) { pintaCinetica(); }
   }
 
+  /* Same reason as on the Spectrum tab: the fixed range belongs to the
+     quantity it was set for. */
+  function solta() {
+    if (escY.solta) escY.solta();
+    pintaCinetica();
+  }
+
   function inicia() {
     LF.espectrograma.inicia(aoSelecionar);
     LF.aoEspectro(aoEspectro);
     criaCinetica();
+    LF.ligaEscalaY(escY, { modo: "#esc-cin", min: "#esc-cin-min",
+      max: "#esc-cin-max", bt: "#bt-esc-cin" }, pintaCinetica);
     LF.q("#bt-corrida").addEventListener("click", function () {
       if (rodando()) para(); else comeca();
     });
@@ -281,7 +291,7 @@ LF.telas.cinetica = (function () {
   }
 
   return {
-    inicia: inicia, recalibra: recalibra,
+    inicia: inicia, recalibra: recalibra, solta: solta,
     get corrida() { return corrida; },
     aoEntrar: function () {
       LF.espectrograma.redimensiona();

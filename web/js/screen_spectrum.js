@@ -7,6 +7,8 @@
 
 LF.telas.espectro = (function () {
   let plot = null, ultimo = null, pendente = false;
+  /* Absorbance sits on a baseline, so the auto range keeps zero in view. */
+  const escY = LF.escalaY({ faixa: { inclui_zero: true } });
   const CANAIS = [
     { k: "r", rot: "R", cor: LF.cor.canal.r },
     { k: "g", rot: "G", cor: LF.cor.canal.g },
@@ -50,7 +52,7 @@ LF.telas.espectro = (function () {
     plot = new uPlot({
       width: 600, height: 300,
       cursor: { drag: { x: true, y: false } },
-      scales: { x: { time: false } },
+      scales: { x: { time: false }, y: { range: escY.range } },
       axes: [LF.eixo(LF.unidadeX(), 0), LF.eixo(unidade(), "auto")],
       series: [{}].concat(CANAIS.map(function (c) { return LF.serie(c.rot, c.cor); })),
       hooks: {
@@ -188,6 +190,8 @@ LF.telas.espectro = (function () {
   function inicia() {
     cria();
     LF.aoEspectro(aoEspectro);
+    LF.ligaEscalaY(escY, { modo: "#esc-y", min: "#esc-y-min",
+      max: "#esc-y-max", bt: "#bt-esc-y" }, pinta);
     LF.q("#bt-escuro").addEventListener("click", function () { captura("escuro"); });
     LF.q("#bt-referencia").addEventListener("click", function () { captura("referencia"); });
     LF.q("#bt-branco").addEventListener("click", function () { captura("branco"); });
@@ -202,6 +206,13 @@ LF.telas.espectro = (function () {
   }
 
   function trocaModo() {
+    /* A range fixed for absorbance, say 0 to 1, hides transmittance — which
+       runs to 100 — completely, and the screen would just look broken. The
+       axis therefore goes back to auto whenever the quantity changes. */
+    if (escY.modo === "manual" && escY.solta) {
+      escY.solta();
+      LF.mensagem("the y axis went back to auto because the mode changed");
+    }
     const falta = faltando();
     if (falta.length) {
       const rot = { escuro: "a dark frame", referencia: "a reference",
@@ -217,6 +228,7 @@ LF.telas.espectro = (function () {
 
   return {
     inicia: inicia, redesenha: pinta, trocaModo: trocaModo,
+    solta: function () { if (escY.solta) escY.solta(); },
     serieDe: serieDe, unidade: unidade, faltando: faltando,
     get ultimo() { return ultimo; },
     aoEntrar: function () { LF.ajusta(plot, LF.q("#g-espectro")); pinta(); },

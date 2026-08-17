@@ -141,7 +141,14 @@
     </div>
   </div>
   <div class="caixa cresce">
-    <h3>Raw column profile — linear intensity, uncalibrated</h3>
+    <div class="cabeca">
+      <h3>Raw column profile — linear intensity, uncalibrated</h3>
+      <label for="esc-cru" data-termo="yscale">Y axis</label>
+      <select id="esc-cru"><option value="auto" selected>auto</option><option value="manual">fixed</option></select>
+      <input id="esc-cru-min" type="number" step="0.01" class="curto" disabled>
+      <input id="esc-cru-max" type="number" step="0.01" class="curto" disabled>
+      <button id="bt-esc-cru">Freeze</button>
+    </div>
     <div id="g-cru" class="grafico"></div>
   </div>
 </section>
@@ -163,6 +170,12 @@
     <label class="caixinha"><input type="checkbox" id="ver-g" checked> G</label>
     <label class="caixinha"><input type="checkbox" id="ver-b"> B</label>
     <label class="caixinha"><input type="checkbox" id="ver-lum"> lum</label>
+    <span class="sep"></span>
+    <label for="esc-y" data-termo="yscale">Y axis</label>
+    <select id="esc-y"><option value="auto" selected>auto</option><option value="manual">fixed</option></select>
+    <input id="esc-y-min" type="number" step="0.01" class="curto" disabled>
+    <input id="esc-y-max" type="number" step="0.01" class="curto" disabled>
+    <button id="bt-esc-y">Freeze</button>
     <span class="sep"></span>
     <button id="bt-salvar-espectro">Save spectrum</button>
     <button id="bt-csv-espectro">CSV</button>
@@ -269,6 +282,12 @@
       <input id="banda-larg" type="number" step="0.5" value="5" class="curto">
       <button id="bt-banda">Add band</button>
       <button id="bt-banda-limpar">Remove all</button>
+      <span class="sep"></span>
+      <label for="esc-cin" data-termo="yscale">Y axis</label>
+      <select id="esc-cin"><option value="auto" selected>auto</option><option value="manual">fixed</option></select>
+      <input id="esc-cin-min" type="number" step="0.01" class="curto" disabled>
+      <input id="esc-cin-max" type="number" step="0.01" class="curto" disabled>
+      <button id="bt-esc-cin">Freeze</button>
     </div>
     <div id="g-cinetica" class="grafico"></div>
   </div>

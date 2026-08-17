@@ -7,6 +7,7 @@
 
 LF.telas.camera = (function () {
   let plot = null, ultima = null, pendente = false;
+  const escY = LF.escalaY();
 
   async function listaDispositivos() {
     const sel = LF.q("#dispositivo");
@@ -147,7 +148,7 @@ LF.telas.camera = (function () {
     plot = new uPlot({
       width: 600, height: 220,
       cursor: { drag: { x: true, y: false } },
-      scales: { x: { time: false } },
+      scales: { x: { time: false }, y: { range: escY.range } },
       axes: [LF.eixo("Column (px)", 0), LF.eixo("Linear intensity", "auto")],
       series: [
         {},
@@ -180,6 +181,8 @@ LF.telas.camera = (function () {
 
   function inicia() {
     cria();
+    LF.ligaEscalaY(escY, { modo: "#esc-cru", min: "#esc-cru-min",
+      max: "#esc-cru-max", bt: "#bt-esc-cru" }, pinta);
     ["#roi-x", "#roi-y", "#roi-w", "#roi-h", "#roi-a"].forEach(function (s) {
       LF.q(s).addEventListener("change", leRoi);
     });

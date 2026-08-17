@@ -184,6 +184,7 @@ LF.telaAtual = "camera";
     LF.q("#modo").addEventListener("change", function () {
       LF.estado.modo = this.value;
       LF.telas.espectro.trocaModo();
+      LF.telas.cinetica.solta();
     });
     LF.q("#media-n").addEventListener("change", function () {
       LF.estado.mediaN = parseInt(this.value, 10);

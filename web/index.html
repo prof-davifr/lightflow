@@ -10,8 +10,25 @@
 </head>
 <body>
 
+<!-- House header, the same one the other scientific tools here use
+     (WaveCal-END): IFBA on the left, the name and one line of what the
+     program does in the middle, the research groups on the right. The three
+     images live in `img/` — this page fetches nothing from a third party. -->
+<header id="identidade">
+  <div class="header-content">
+    <img src="img/ifba.png" alt="IFBA" class="logo-ifba">
+    <div class="header-text">
+      <h1>LightFlow: Webcam Spectrometer</h1>
+      <p class="subtitle">Spectrum capture, wavelength calibration and reaction kinetics</p>
+    </div>
+    <div class="header-logos">
+      <img src="img/gpend.png" alt="GPEND" class="logo-group">
+      <img src="img/gpsc.png" alt="GPSC" class="logo-group">
+    </div>
+  </div>
+</header>
+
 <header id="barra">
-  <h1>LightFlow</h1>
   <nav id="abas">
     <button data-tela="camera" class="ativa">Camera</button>
     <button data-tela="espectro">Spectrum</button>

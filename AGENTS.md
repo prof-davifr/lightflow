@@ -66,6 +66,15 @@ again**, and the program clears the dark and the reference when it changes.
 - `camera.recorta` reads only the rotated ROI's bounding box, not the whole
   frame. At 30 fps that is 12 MB/s instead of 110.
 
+## The house header
+
+- **`#identidade` is the shared header of the scientific tools here**, the same
+  one as WaveCal-END and MWFlow: IFBA on the left, name and one line of what
+  the program does in the middle, GPEND and GPSC on the right, 50 px and 45 px
+  tall. Its measurements are in **pixels**, not `rem`: the root font is 13 px
+  here and 16 px in MWFlow, and the same `rem` would give two different
+  headers. It changes together with the other tools, never alone.
+
 ## Geometry
 
 - The ROI centre is `x + (w-1)/2`, **not** `x + w/2`. It has to be the centre of

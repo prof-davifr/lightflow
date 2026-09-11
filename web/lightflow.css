@@ -18,15 +18,39 @@ html, body {
 
 body { display: flex; flex-direction: column; }
 
+/* ----------------------------------------------------------- identity */
+/* The standard header of the scientific tools here — the same one as
+   WaveCal-END. The measurements come from there, and they are in PIXELS on
+   purpose: `rem` follows the root font, which is 13 px here and 16 px in
+   MWFlow, so the same `rem` would give two headers of different sizes. The
+   images live in `img/`: this page fetches nothing from a third party. */
+#identidade {
+  flex: none; text-align: center; padding: 16px 14px;
+  background: var(--fundo); border-bottom: 1px solid var(--grade);
+}
+#identidade .header-content {
+  display: flex; align-items: center; justify-content: space-between; gap: 32px;
+}
+#identidade .header-text { flex: 1 1 0; min-width: 0; }
+#identidade h1 {
+  margin: 0 0 4px; font-size: 24px; font-weight: 700; color: var(--tinta);
+}
+#identidade .subtitle {
+  margin: 0; font-size: 13.6px; font-weight: 300; color: var(--tinta2);
+}
+#identidade .logo-ifba { height: 50px; width: auto; object-fit: contain; }
+#identidade .header-logos { display: flex; align-items: center; gap: 24px; }
+#identidade .logo-group { height: 45px; width: auto; object-fit: contain; }
+@media (max-width: 800px) {
+  #identidade .header-content { flex-direction: column; gap: 16px; }
+  #identidade .header-logos { order: 3; }
+}
+
 /* ------------------------------------------------------------- header */
 #barra {
   display: flex; align-items: center; gap: 16px;
   padding: 8px 14px; background: var(--fundo);
   border-bottom: 1px solid var(--grade); flex: none;
-}
-#barra h1 {
-  margin: 0; font-size: 16px; font-weight: 650;
-  letter-spacing: .2px; color: var(--seq4);
 }
 #abas { display: flex; gap: 2px; }
 #abas button {

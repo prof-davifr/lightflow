@@ -75,6 +75,13 @@ again**, and the program clears the dark and the reference when it changes.
   here and 16 px in MWFlow, and the same `rem` would give two different
   headers. It changes together with the other tools, never alone.
 
+## Colour ramps
+
+- **The three spectrogram ramps are MWFlow's, point for point** (`jet`,
+  `viridis`, `cinza`, with `jet` as the default). The two instruments get read
+  side by side, so a colour cannot mean one thing here and another there. A
+  ramp changes in both programs or in neither.
+
 ## Geometry
 
 - The ROI centre is `x + (w-1)/2`, **not** `x + w/2`. It has to be the centre of

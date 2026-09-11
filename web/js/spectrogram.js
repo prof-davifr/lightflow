@@ -31,15 +31,24 @@ LF.espectrograma = (function () {
   function mistura(a, b, t) {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
+  /* The same three ramps as MWFlow, point for point: the two instruments are
+     read side by side, and a colour that means one thing on one screen cannot
+     mean another thing on the other.
+
+     Jet, the MATLAB ramp, is piecewise linear with a break every 1/8 of the
+     range, which is why these NINE evenly spaced points reproduce it exactly
+     under linear interpolation. Jet has no monotone luminance: a yellow band
+     looks brighter than both of its sides, and that invents an edge the data
+     does not have. It is here because it is the ramp the lab reads without
+     thinking, and because `viridis` sits next to it to check against. */
   const RAMPAS = {
-    /* The house ramp, stretched at both ends to cover the range while keeping
-       the luminance monotone. */
-    casa: [[255, 255, 255], [126, 200, 216], [59, 163, 189], [15, 125, 153], [8, 83, 107], [4, 34, 44]],
+    jet: [[0, 0, 127], [0, 0, 255], [0, 127, 255], [0, 255, 255], [127, 255, 127],
+          [255, 255, 0], [255, 127, 0], [255, 0, 0], [127, 0, 0]],
     viridis: [[68, 1, 84], [59, 82, 139], [33, 145, 140], [94, 201, 98], [253, 231, 37]],
     cinza: [[255, 255, 255], [0, 0, 0]],
   };
   function fazLut(nome) {
-    const p = RAMPAS[nome] || RAMPAS.casa;
+    const p = RAMPAS[nome] || RAMPAS.jet;
     const u = new Uint8ClampedArray(256 * 4);
     for (let i = 0; i < 256; i++) {
       const x = i / 255 * (p.length - 1);
@@ -275,7 +284,7 @@ LF.espectrograma = (function () {
     aoSelecionar = cbSelecao;
     vis = LF.q("#esp-canvas"); visCtx = vis.getContext("2d");
     eixos = LF.q("#esp-eixos"); eixosCtx = eixos.getContext("2d");
-    lut = fazLut("casa");
+    lut = fazLut(LF.q("#mapa").value);
     ajustaTamanho();
 
     vis.addEventListener("pointerdown", desce);

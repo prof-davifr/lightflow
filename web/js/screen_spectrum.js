@@ -140,16 +140,28 @@ LF.telas.espectro = (function () {
     }
   }
 
+  /* The table always holds this many rows, blank ones included. The plot box
+     above it is flex: 1, so a table that grew and shrank with the peak count
+     resized the plot on every frame: the y range stayed pinned, but its pixels
+     moved, and a frozen axis still bounced. */
+  const LINHAS_PICOS = 8;
+
+  function completaPicos(corpo) {
+    while (corpo.rows.length < LINHAS_PICOS) {
+      corpo.insertRow().innerHTML = "<td>&nbsp;</td><td></td><td></td><td></td>";
+    }
+  }
+
   function mostraPicos(xs) {
     const corpo = LF.q("#tab-picos tbody");
     const y = serieDe(LF.estado.canal);
-    if (!y) { corpo.innerHTML = ""; return; }
+    corpo.innerHTML = "";
+    if (!y) { completaPicos(corpo); return; }
     /* In absorbance and transmittance the interesting feature is a band, and in
        transmittance it points down, so the search runs on the negated curve. */
     const procura = LF.estado.modo === "transmittance"
       ? Float32Array.from(y, function (v) { return -v; }) : y;
-    const picos = LF.nucleo.peaks.acha(procura).slice(0, 8);
-    corpo.innerHTML = "";
+    const picos = LF.nucleo.peaks.acha(procura).slice(0, LINHAS_PICOS);
     picos.forEach(function (p) {
       const nm = LF.calibrado()
         ? LF.nucleo.calibration.toNm(LF.estado.cal, p.px) : p.px;
@@ -161,6 +173,7 @@ LF.telas.espectro = (function () {
         + "</td><td class=\"num\">" + LF.num(p.prom, 4) + "</td>";
       corpo.appendChild(tr);
     });
+    completaPicos(corpo);
   }
 
   /* --------------------------------------------------------------- actions */
@@ -188,6 +201,7 @@ LF.telas.espectro = (function () {
   }
 
   function inicia() {
+    completaPicos(LF.q("#tab-picos tbody"));
     cria();
     LF.aoEspectro(aoEspectro);
     LF.ligaEscalaY(escY, { modo: "#esc-y", min: "#esc-y-min",

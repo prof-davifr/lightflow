@@ -20,7 +20,7 @@ LF.telas.calibracao = (function () {
       cursor: { drag: { x: true, y: false } },
       scales: { x: { time: false } },
       axes: [LF.eixo("Column (px)", 0), LF.eixo("Linear intensity", "auto")],
-      series: [{}, LF.serie("signal", LF.cor.seq3)],
+      series: [{}, LF.serie("signal", LF.cor.seq[2])],
       hooks: {
         draw: [function (u) {
           /* Every marked point gets a line, so it is obvious which peaks are
@@ -29,14 +29,14 @@ LF.telas.calibracao = (function () {
           ctx.save();
           pontos.forEach(function (p, k) {
             const x = u.valToPos(p.px, "x", true);
-            ctx.strokeStyle = p.usar === false ? LF.cor.tinta2 : LF.cor.cat2;
+            ctx.strokeStyle = p.usar === false ? LF.cor.tinta2 : LF.cor.cat[1];
             ctx.setLineDash(p.usar === false ? [3, 3] : []);
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(x, u.bbox.top); ctx.lineTo(x, u.bbox.top + u.bbox.height);
             ctx.stroke();
             ctx.setLineDash([]);
-            ctx.fillStyle = LF.cor.cat2;
+            ctx.fillStyle = LF.cor.cat[1];
             ctx.font = "10px system-ui";
             ctx.fillText(isFinite(p.nm) ? LF.num(p.nm, 1) : "?" + (k + 1),
               x + 3, u.bbox.top + 11);
@@ -60,8 +60,8 @@ LF.telas.calibracao = (function () {
         return LF.faixa(lo, hi, { inclui_zero: true, margem: 0.2 });
       } } },
       axes: [LF.eixo("Column (px)", 0), LF.eixo("Residual (nm)", "auto")],
-      series: [{}, { label: "residual", stroke: LF.cor.cat2, width: 0,
-        points: { show: true, size: 7, fill: LF.cor.cat2 } }],
+      series: [{}, { label: "residual", stroke: LF.cor.cat[1], width: 0,
+        points: { show: true, size: 7, fill: LF.cor.cat[1] } }],
     }, [LF.vazio(2), LF.vazio(2)], elR);
     LF.ajusta(plotRes, elR);
   }

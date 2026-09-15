@@ -23,6 +23,11 @@ Read `README.md` first. This file records only what bites.
   clips. Every axis must come from `LF.eixo`, which sizes from the widest label.
 - The legend is **not** inside the height `setSize` asks for. `LF.ajusta`
   subtracts it; resizing a plot by hand will overflow the box.
+- `LF.ajusta` runs on every frame, so the box it measures must get its height
+  from the screen, never from its content. Content-sized, the chart loses 16 px
+  per frame (Calibration had an `auto` grid row). A neighbour whose height
+  changes with the data resizes the chart too: the peak table under Spectrum
+  did, and a frozen y axis still bounced. It now keeps eight rows, blank or not.
 - Emit `NaN`, never `Infinity`. uPlot draws `NaN` as a gap and `Infinity` as a
   full-height vertical stroke that reads as an enormous real peak.
 

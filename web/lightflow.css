@@ -152,6 +152,15 @@ button.ajuda {
 .caixa.cresce { flex: 1; min-height: 220px; display: flex; flex-direction: column; }
 .caixa h3 { margin: 0 0 8px; font-size: 12px; font-weight: 620; color: var(--tinta2); }
 .duas { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; }
+/* A grid row sized "auto" takes the height of its content, and a uPlot chart
+   in it is resized to that same height minus the padding and the legend: the
+   chart lost 16 px on every frame until only a sliver was left. A 1fr row gets
+   its height from the screen instead. */
+.duas.enche { flex: 1; min-height: 320px; grid-template-rows: minmax(0, 1fr); }
+.duas.enche > .caixa { min-height: 0; overflow-y: auto; }
+.duas.enche > .caixa.cresce { overflow: hidden; }
+/* The fixed 90 px boxes pushed the remove button out of a narrow column. */
+#tab-cal input[type="number"], #tab-cal input[type="text"] { width: 100%; min-width: 48px; }
 
 .grafico { flex: 1; min-height: 200px; min-width: 0; }
 .grafico.baixo { min-height: 120px; height: 140px; }

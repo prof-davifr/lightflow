@@ -194,9 +194,15 @@ LF.telas.ajuda = (function () {
         wavelengths: 404.66, 435.83, 546.07 and the yellow pair at 576.96 and
         579.07 nm. The broad red band at 611.6 nm comes from the phosphor.</p>
       <p><b>The yellow pair is 2.1 nm apart</b> and almost nothing homemade
-        resolves it. If only one hump appears there, call it 578.01 nm — its
-        midpoint — rather than picking one of the two, which writes a
-        nanometre of error into the fit before it starts.</p>
+        resolves it, so the preset lists it as one line at 578.01 nm, its
+        midpoint. Picking one of the two writes a nanometre of error into the
+        fit before it starts. If your instrument does show two humps there, mark
+        one of them only, or type both wavelengths by hand.</p>
+      <p><b>Load its lines</b> names the marked peaks by their spacing, not by
+        their order, so a faint violet line left unmarked or a red end on the
+        left of the sensor still gets the right names. With only three peaks the
+        spacing can fit more than one set of lines; the footer says so, and then
+        one more peak settles it.</p>
       <p><b>Order 2 is right nearly always.</b> The grating equation is a sine,
         and over the fan a small grating covers, its departure from a straight
         line is a quadratic to well under a tenth of a nanometre. Order 1 exists

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ajusta, toNm, toPx, eixo, dispersao, confere, LINHAS, DUBLETO_HG }
+import { ajusta, toNm, toPx, eixo, dispersao, confere, nomeia, LINHAS, DUBLETO_HG }
   from "../web/js/nucleo/calibration.js";
 import { acha } from "../web/js/nucleo/peaks.js";
 import { polyval } from "../web/js/nucleo/num.js";
@@ -158,4 +158,86 @@ test("the yellow mercury doublet has a documented single-peak value", () => {
      them. Marking the blurred hump as either line writes a 1 nm error into the
      fit before it starts. */
   assert.ok(DUBLETO_HG > 576.96 && DUBLETO_HG < 579.07);
+});
+
+/* ------------------------------------------------ naming the marked peaks */
+
+/* The columns where each preset line lands on the synthetic instrument, in the
+   order of the preset. */
+const PRESET_HG = LINHAS.fluorescent.pontos;
+const colunaDe = (nm) => toPx(CAL_VERDADE, nm, NCOL);
+
+test("the preset offers the unresolved yellow pair as one line at its midpoint", () => {
+  /* As two lines the pair took two names: the hump got 576.96 and the europium
+     band, one peak further, got 579.07. The fit still looked fine. */
+  const nms = PRESET_HG.map((p) => p.nm);
+  assert.ok(nms.includes(DUBLETO_HG));
+  assert.ok(!nms.includes(576.96) && !nms.includes(579.07));
+});
+
+test("nomeia names every visible line of the lamp", () => {
+  const pxs = PRESET_HG.map((p) => colunaDe(p.nm) + 0.1);
+  const r = nomeia(pxs, PRESET_HG);
+  assert.deepEqual(r.linhas.map((l) => l.nm), PRESET_HG.map((p) => p.nm));
+  assert.equal(r.crescente, true);
+  assert.equal(r.ambiguo, false);
+});
+
+test("nomeia is not shifted by a faint line that was never marked", () => {
+  /* The violet line is weak on a webcam, so "strongest unused peak" marks the
+     other four first. Naming in order called the blue line violet. */
+  const vistas = PRESET_HG.filter((p) => p.nm > 420);
+  const pxs = vistas.map((p) => colunaDe(p.nm));
+  const r = nomeia(pxs.slice().reverse(), PRESET_HG);   // marking order is irrelevant
+  assert.deepEqual(r.linhas.map((l) => l.nm), vistas.map((p) => p.nm).reverse());
+  assert.equal(r.ambiguo, false);
+});
+
+test("nomeia finds the red end on the left of the sensor", () => {
+  const pxs = PRESET_HG.map((p) => NCOL - 1 - colunaDe(p.nm));
+  const r = nomeia(pxs, PRESET_HG);
+  assert.deepEqual(r.linhas.map((l) => l.nm), PRESET_HG.map((p) => p.nm));
+  assert.equal(r.crescente, false);
+});
+
+test("nomeia says so when the spacing cannot tell the direction", () => {
+  /* Three lasers on evenly spaced columns: mirrored, the pattern is the same. */
+  const lasers = LINHAS.laser.pontos;
+  const r = nomeia([200, 550, 900], lasers);
+  assert.equal(r.ambiguo, true);
+  assert.equal(r.crescente, true, "red on the right is the assumption kept");
+});
+
+test("nomeia refuses more peaks than lines, and a single peak", () => {
+  assert.throws(() => nomeia([1, 2, 3, 4, 5, 6], PRESET_HG), /more marked peaks/);
+  assert.throws(() => nomeia([100], PRESET_HG), /at least two peaks/);
+});
+
+test("the lamp calibrates to a fraction of a nanometre through the whole path", () => {
+  /* The test that the old preset failed: a spectrum where the yellow pair is
+     one hump, four peaks marked without the violet line, and the preset doing
+     the naming. Before, the axis was 11 nm out at the red end. */
+  const y = new Float32Array(NCOL);
+  const linhas = [[404.66, 0.35, 4], [435.83, 0.75, 4], [546.07, 1.0, 4],
+    [576.96, 0.45, 4], [579.07, 0.45, 4], [611.60, 0.8, 7]];
+  for (let i = 0; i < NCOL; i++) y[i] = 0.03;
+  linhas.forEach(([nm, h, s]) => {
+    const c = colunaDe(nm);
+    for (let i = 0; i < NCOL; i++) y[i] += h * Math.exp(-((i - c) ** 2) / (2 * s * s));
+  });
+  const picos = acha(y).sort((a, b) => b.prom - a.prom).slice(0, 4);
+  assert.ok(!picos.some((p) => Math.abs(p.px - colunaDe(404.66)) < 5),
+    "the violet line should be the one left out, as on the bench");
+
+  const r = nomeia(picos.map((p) => p.px), PRESET_HG);
+  const pontos = picos.map((p, k) => ({
+    px: p.px, nm: r.linhas[k].nm, usar: r.linhas[k].ajuste !== false,
+  }));
+  const cal = ajusta(pontos, 2);
+  const ax = eixo(cal, NCOL);
+  let pior = 0;
+  for (let p = colunaDe(420); p < colunaDe(620); p++) {
+    pior = Math.max(pior, Math.abs(ax[Math.round(p)] - lambda(Math.round(p))));
+  }
+  assert.ok(pior < 0.5, `worst error from 420 to 620 nm: ${pior} nm`);
 });

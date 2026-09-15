@@ -79,6 +79,22 @@ export function refina(y, i) {
   return i + d;
 }
 
+/* The highest column within `janela` columns of `i`, NaN skipped.
+
+   A click on a plot lands a screen pixel or two off the line, and one screen
+   pixel is two or three columns. `refina` refuses a shift over one column, so a
+   click fed straight to it stayed where it landed: about a nanometre off the
+   line, and a second click on the same line made a second point. */
+export function picoPerto(y, i, janela) {
+  janela = janela === undefined ? 8 : janela;
+  let melhor = i;
+  for (let k = Math.max(0, i - janela); k <= Math.min(y.length - 1, i + janela); k++) {
+    if (!isFinite(y[k])) continue;
+    if (!isFinite(y[melhor]) || y[k] > y[melhor]) melhor = k;
+  }
+  return melhor;
+}
+
 /* Full width at half maximum, in the units of `xs`, measured above a baseline
    taken as the lowest point inside the search window on each side.
    Returns NaN when the half-maximum crossing is not reached before the window

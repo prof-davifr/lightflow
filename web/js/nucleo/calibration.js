@@ -9,6 +9,12 @@
 
 import { polyfit, polyval, rms } from "./num.js";
 
+/* The yellow mercury doublet at 576.96 and 579.07 nm is 2.1 nm apart. Almost no
+   homemade instrument resolves it, and marking one blurred hump as either line
+   puts a 1 nm error straight into the fit. The preset therefore offers the pair
+   as ONE line at its midpoint. Declared before LINHAS, which uses it. */
+export const DUBLETO_HG = 578.01;
+
 /* Reference lines, with the source that makes each set worth trusting.
 
    The fluorescent lamp is the standard of the field for a reason: the four
@@ -26,8 +32,10 @@ export const LINHAS = {
       { nm: 404.66, rotulo: "Hg violet", ajuste: true },
       { nm: 435.83, rotulo: "Hg blue", ajuste: true },
       { nm: 546.07, rotulo: "Hg green", ajuste: true },
-      { nm: 576.96, rotulo: "Hg yellow 1", ajuste: true },
-      { nm: 579.07, rotulo: "Hg yellow 2", ajuste: false },
+      /* Listed as two lines, the pair used to take two names: the hump got
+         576.96 and the europium band, one peak further, got 579.07. The fit
+         still looked good and the red end of the axis was 11 nm out. */
+      { nm: DUBLETO_HG, rotulo: "Hg yellow pair (unresolved)", ajuste: true },
       { nm: 611.60, rotulo: "Eu red (phosphor, wide)", ajuste: false },
     ],
   },
@@ -54,11 +62,74 @@ export const LINHAS = {
   },
 };
 
-/* The yellow mercury doublet at 576.96 and 579.07 nm is 2.1 nm apart. Almost no
-   homemade instrument resolves it, and marking one blurred hump as either line
-   puts a 1 nm error straight into the fit. When only one peak is visible there,
-   use this. */
-export const DUBLETO_HG = 578.01;
+/* Which reference line each marked peak is.
+
+   Naming the k-th peak from the left as the k-th line breaks in the two ways a
+   real bench produces: a weak line is not marked (the violet mercury line is
+   faint on a webcam, and "strongest unused peak" picks the europium band before
+   it), and the red end sits on the LEFT of the sensor. Either way every name
+   shifts, and the fit is fitted to the wrong lines.
+
+   A grating is monotonic and close to linear, so the peaks keep the SPACING
+   pattern of the lines. Every ordered choice of lines, in both directions, is
+   scored by the rms of a straight line through it, and the best one wins. A
+   straight line and not the order-2 fit: with four points order 2 has one
+   degree of freedom left, which lets a wrong choice fit almost as well as the
+   right one. The curvature of a real grating costs the right choice about half
+   a nanometre; a wrong one costs tens.
+
+   `pxs` is the column of each marked peak, in any order. Returns
+   {linhas, crescente, rms, ambiguo}: `linhas[k]` is the line for `pxs[k]`,
+   `crescente` says wavelength grows with the column, and `ambiguo` says another
+   choice scored nearly as well — the case with three peaks and three evenly
+   spaced lines, where the data cannot tell the direction. Then the choice with
+   red on the right is kept. */
+export function nomeia(pxs, linhas) {
+  const n = pxs.length, L = linhas.length;
+  if (n < 2) throw new Error("mark at least two peaks before naming them");
+  if (n > L) {
+    throw new Error("there are more marked peaks (" + n + ") than lines in this "
+      + "source (" + L + ") — remove the extra ones first");
+  }
+  const ordemPx = pxs.map(function (p, k) { return k; })
+    .sort(function (a, b) { return pxs[a] - pxs[b]; });
+  const xs = ordemPx.map(function (k) { return pxs[k]; });
+  const ref = linhas.slice().sort(function (a, b) { return a.nm - b.nm; });
+
+  const cand = [];
+  const escolha = [];
+  (function combina(inicio) {
+    if (escolha.length === n) {
+      [true, false].forEach(function (crescente) {
+        const sel = escolha.map(function (j) { return ref[j]; });
+        if (!crescente) sel.reverse();
+        const ys = sel.map(function (l) { return l.nm; });
+        let r = 0;
+        if (n >= 3) {
+          const c = polyfit(xs, ys, 1);
+          r = rms(ys.map(function (y, k) { return y - polyval(c, xs[k]); }));
+        }
+        cand.push({ sel: sel, crescente: crescente, rms: r });
+      });
+      return;
+    }
+    for (let j = inicio; j <= L - (n - escolha.length); j++) {
+      escolha.push(j);
+      combina(j + 1);
+      escolha.pop();
+    }
+  })(0);
+
+  cand.sort(function (a, b) { return a.rms - b.rms; });
+  const tol = Math.max(2 * cand[0].rms, 0.05);
+  const perto = cand.filter(function (c) { return c.rms <= tol; });
+  const ambiguo = perto.length > 1;
+  const fica = perto.filter(function (c) { return c.crescente; })[0] || cand[0];
+
+  const out = new Array(n);
+  ordemPx.forEach(function (k, pos) { out[k] = fica.sel[pos]; });
+  return { linhas: out, crescente: fica.crescente, rms: fica.rms, ambiguo: ambiguo };
+}
 
 /* Least-squares fit of wavelength against column index.
 

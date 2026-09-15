@@ -3,9 +3,9 @@
 
    The workflow this screen is built around: point the slit at a fluorescent
    tube, press "Add the strongest unused peak" a few times, press "Load its
-   lines" to name them in order, fit, and read the residuals. Naming in order
-   works because a grating puts wavelength monotonically along the sensor, so
-   the k-th peak from the left is the k-th line. */
+   lines" to name them, fit, and read the residuals. Naming works because a
+   grating puts wavelength monotonically and almost linearly along the sensor,
+   so the peaks keep the spacing pattern of the lines. */
 
 LF.telas.calibracao = (function () {
   let plot = null, plotRes = null, pendente = false;
@@ -49,7 +49,7 @@ LF.telas.calibracao = (function () {
 
     plot.over.addEventListener("click", function () {
       if (!ultimoY || plot.cursor.idx === null || plot.cursor.idx === undefined) return;
-      adiciona(plot.cursor.idx);
+      adiciona(LF.nucleo.peaks.picoPerto(ultimoY, plot.cursor.idx));
     });
 
     const elR = LF.q("#g-residuos");
@@ -174,29 +174,36 @@ LF.telas.calibracao = (function () {
     });
   }
 
-  /* Names the marked peaks in order. A grating is monotonic, so the k-th peak
-     from the left is the k-th line of the source; that is what makes this safe
-     and it is also exactly why it breaks if a peak was marked twice or a faint
-     line was missed. The residuals afterwards are what catch that. */
+  /* Names the marked peaks by matching their spacing to the source's lines, in
+     either direction along the sensor, so a faint line left unmarked or a red
+     end on the left does not shift every name. `nomeia` explains the rule. A
+     peak marked twice still breaks it; the residuals afterwards catch that. */
   function carregaLinhas() {
     const p = presetAtual();
     if (!p) return;
-    const linhas = p.pontos.slice().sort(function (a, b) { return a.nm - b.nm; });
-    if (pontos.length > linhas.length) {
-      LF.mensagem("there are more marked peaks (" + pontos.length + ") than lines in "
-        + "this source (" + linhas.length + ") — remove the extra ones first", true);
+    let r;
+    try {
+      r = LF.nucleo.calibration.nomeia(pontos.map(function (q) { return q.px; }), p.pontos);
+    } catch (e) {
+      LF.mensagem(e.message, true);
       return;
     }
-    pontos.sort(function (a, b) { return a.px - b.px; });
     pontos.forEach(function (q, k) {
-      q.nm = linhas[k].nm;
-      q.rotulo = linhas[k].rotulo;
-      q.usar = linhas[k].ajuste !== false;
+      q.nm = r.linhas[k].nm;
+      q.rotulo = r.linhas[k].rotulo;
+      q.usar = r.linhas[k].ajuste !== false;
     });
     mostraTabela();
     plot.redraw();
-    LF.mensagem("named " + pontos.length + " peaks in order — check that each label "
-      + "matches the line you meant before fitting");
+    const lado = r.crescente ? "red end on the right" : "red end on the left";
+    if (r.ambiguo) {
+      LF.mensagem("named " + pontos.length + " peaks, but the spacing fits more than "
+        + "one set of lines — assumed " + lado + ". Check each label, or mark "
+        + "another peak", true);
+    } else {
+      LF.mensagem("named " + pontos.length + " peaks by their spacing (" + lado
+        + ") — check that each label matches the line you meant before fitting");
+    }
   }
 
   /* ---------------------------------------------------------------- fit */
@@ -248,8 +255,14 @@ LF.telas.calibracao = (function () {
     LF.estado.cal = cal;
     LF.estado.eixo = LF.nucleo.calibration.eixo(cal, LF.estado.nCol);
     const problemas = LF.nucleo.calibration.confere(cal, LF.estado.assinatura, LF.estado.nCol);
-    LF.selo("#selo-cal", problemas.length ? "calibration stale" : "calibrated",
-      problemas.length ? "mau" : "ok");
+    /* The axis is applied either way, so the operator can see what the fit
+       does, but a fit whose residuals span several columns does not get to
+       call itself calibrated. */
+    const d = LF.nucleo.calibration.dispersao(cal, LF.estado.nCol);
+    const suspeita = cal.rms > Math.abs(d) * 3;
+    if (problemas.length) LF.selo("#selo-cal", "calibration stale", "mau");
+    else if (suspeita) LF.selo("#selo-cal", "calibration suspect", "mau");
+    else LF.selo("#selo-cal", "calibrated", "ok");
     if (problemas.length) LF.q("#aviso-cal").textContent = problemas.join("; ");
     LF.telas.espectro.redesenha();
     LF.telas.cinetica.recalibra();

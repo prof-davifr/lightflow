@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { acha, refina, fwhm, area, media, indiceDe } from "../web/js/nucleo/peaks.js";
+import { acha, refina, fwhm, area, media, indiceDe, picoPerto } from "../web/js/nucleo/peaks.js";
 
 function gaussiana(n, centro, sigma, altura, fundo) {
   const y = new Float32Array(n);
@@ -109,4 +109,21 @@ test("indiceDe finds the nearest column", () => {
   assert.equal(indiceDe(xs, 419), 2);
   assert.equal(indiceDe(xs, 404), 0);
   assert.equal(indiceDe(xs, 1000), 3);
+});
+
+test("picoPerto moves a click that landed beside a line onto its maximum", () => {
+  /* One screen pixel is two or three columns, and refina alone refuses to move
+     more than one: the point used to stay where the click landed. */
+  const y = gaussiana(1024, 511.37, 4, 0.8, 0.02);
+  for (const clique of [505, 508, 514, 518]) {
+    const i = picoPerto(y, clique);
+    assert.equal(i, 511, `click at ${clique} went to ${i}`);
+    assert.ok(Math.abs(refina(y, i) - 511.37) < 0.05);
+  }
+});
+
+test("picoPerto skips NaN and stays inside the array", () => {
+  const y = new Float32Array([NaN, 0.2, 0.9, 0.1, NaN]);
+  assert.equal(picoPerto(y, 0), 2);
+  assert.equal(picoPerto(y, 4, 1), 3);
 });

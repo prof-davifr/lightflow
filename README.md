@@ -10,7 +10,14 @@ folder of static files.
 
 ## Run it
 
-Use the published page, or serve the folder locally:
+Open the published page in **Chrome**:
+
+<https://prof-davifr.github.io/lightflow/>
+
+Nothing is installed and nothing leaves the machine: the page talks to the
+camera and keeps every frame in the browser.
+
+To run it from your own copy instead, serve the folder locally:
 
 ```bash
 python3 -m http.server 8000 --directory web

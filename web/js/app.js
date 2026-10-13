@@ -155,6 +155,27 @@ LF.telaAtual = "camera";
     }
   }
 
+  async function soltar() {
+    if (!LF.camera.aberta()) {
+      LF.mensagem("open the camera first: the release goes through the open stream", true);
+      return;
+    }
+    if (LF.telas.cinetica.corrida && !confirm("A run is recording. Releasing the "
+        + "camera lets the exposure drift under it.\n\nRelease anyway?")) return;
+    try {
+      const r = await LF.camera.solta();
+      LF.telas.camera.mostraEstado(r.estado);
+      if (r.confere.ok) {
+        LF.mensagem("camera released: exposure and white balance are automatic again");
+      } else {
+        LF.mensagem("the camera did not take the release: " + r.confere.divergente
+          .map(function (d) { return d.campo + " is " + d.obtido; }).join(", "), true);
+      }
+    } catch (err) {
+      LF.mensagem("could not release the camera: " + err.message, true);
+    }
+  }
+
   function ligaPainel() {
     LF.q("#bt-abrir").addEventListener("click", function () { LF.telas.camera.abre(); });
     LF.q("#bt-fechar").addEventListener("click", function () {
@@ -164,6 +185,7 @@ LF.telaAtual = "camera";
       LF.mensagem("camera closed");
     });
     LF.q("#bt-travar").addEventListener("click", travar);
+    LF.q("#bt-soltar").addEventListener("click", soltar);
 
     LF.q("#exposicao").addEventListener("input", mostraExposicao);
     LF.q("#exposicao").addEventListener("change", function () {

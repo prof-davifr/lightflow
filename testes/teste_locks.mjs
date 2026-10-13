@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { plano, confere, podeMedir, comandoV4l2 } from "../web/js/nucleo/locks.js";
+import { plano, confere, podeMedir, comandoV4l2, solta, comandoRestaura, CONTROLES_V4L2 }
+  from "../web/js/nucleo/locks.js";
 
 /* What Chrome reports for this bench's Suyin HD Camera. */
 const SUYIN = {
@@ -98,4 +99,35 @@ test("the v4l2 fallback names the controls no browser can reach", () => {
   assert.match(c, /sharpness=0/);
   assert.match(c, /gamma=100/);
   assert.match(c, /\/dev\/video2/);
+});
+
+test("releasing hands every loop back to the camera's automatic mode", () => {
+  const cap = Object.assign({ focusMode: ["manual", "continuous"] }, SUYIN);
+  assert.deepEqual(solta(cap), {
+    exposureMode: "continuous", whiteBalanceMode: "continuous", focusMode: "continuous",
+  });
+});
+
+test("releasing leaves alone a mode the camera has no automatic for", () => {
+  /* A camera with manual exposure only has nothing to hand back; asking for a
+     mode it never declared would make the driver reject the whole request. */
+  const r = solta({ exposureMode: ["manual"], whiteBalanceMode: ["continuous", "manual"] });
+  assert.deepEqual(r, { whiteBalanceMode: "continuous" });
+  assert.deepEqual(solta({}), {});
+});
+
+test("the v4l2 restore undoes every control the lock line sets", () => {
+  const nomes = comandoV4l2().split("--set-ctrl=")[1].split(",")
+    .map((c) => c.split("=")[0]);
+  nomes.forEach((n) => assert.ok(CONTROLES_V4L2.includes(n), n + " is never restored"));
+  assert.match(comandoRestaura("/dev/video4"), /-d \/dev\/video4 --list-ctrls/);
+});
+
+test("the v4l2 restore sets the automatic modes after the values", () => {
+  /* A driver refuses a manual value while its automatic mode is on. */
+  const ultimoValor = Math.max(CONTROLES_V4L2.indexOf("exposure_time_absolute"),
+    CONTROLES_V4L2.indexOf("white_balance_temperature"),
+    CONTROLES_V4L2.indexOf("focus_absolute"));
+  ["auto_exposure", "white_balance_automatic", "focus_automatic_continuous"]
+    .forEach((m) => assert.ok(CONTROLES_V4L2.indexOf(m) > ultimoValor, m));
 });

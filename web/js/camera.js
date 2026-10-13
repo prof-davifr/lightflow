@@ -96,6 +96,23 @@ LF.camera = (function () {
     return estado();
   }
 
+  /* Hands exposure, white balance and focus back to the camera. The camera
+     keeps a lock after the stream closes, so without this every other program
+     that opens it afterwards gets a fixed exposure. The read-back is checked
+     here too: a driver can ignore the release as easily as the lock. */
+  async function solta() {
+    if (!track) throw new Error("no camera is open");
+    const N = LF.nucleo.locks;
+    const restricoes = N.solta(capacidades);
+    if (!Object.keys(restricoes).length) {
+      throw new Error("this camera declares no automatic mode to return to");
+    }
+    await track.applyConstraints({ advanced: [restricoes] });
+    ajustes = track.getSettings ? track.getSettings() : {};
+    plano = null; conferido = null;
+    return { estado: estado(), confere: N.confere(restricoes, ajustes) };
+  }
+
   function estado() {
     return {
       aberta: aberta(),
@@ -205,7 +222,7 @@ LF.camera = (function () {
 
   return {
     lista: lista, abre: abre, fecha: fecha, aberta: aberta, tamanho: tamanho,
-    trava: trava, estado: estado,
+    trava: trava, solta: solta, estado: estado,
     recorta: recorta, quadroInteiro: quadroInteiro,
     comeca: comeca, para: para, fps: fps,
     get capacidades() { return capacidades || {}; },

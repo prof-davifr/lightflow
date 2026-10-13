@@ -342,7 +342,16 @@ LF.telas.ajuda = (function () {
         <code>v4l2-ctl -d /dev/video2 --all</code>. Sharpening is not cosmetic:
         it is a spatial filter, and its overshoot at the edge of a narrow line
         changes the line's area, which is exactly what a band integration
-        reports.</p>`;
+        reports.</p>
+      <h4>Giving the camera back</h4>
+      <p>The camera keeps every one of these settings after LightFlow closes,
+        and so does the next program that opens it. <b>Release</b> on the side
+        panel returns exposure, white balance and focus to automatic. The
+        command below does that and also undoes the line above, putting each
+        control back to the default the camera itself declares. Controls
+        LightFlow never touches, such as the mains-frequency filter, are left
+        alone.</p>
+      <div class="formula" id="cmd-v4l2-volta">…</div>`;
     } },
   ];
 
@@ -357,6 +366,8 @@ LF.telas.ajuda = (function () {
     el.innerHTML = h;
     const cmd = LF.q("#cmd-v4l2");
     if (cmd) cmd.textContent = LF.nucleo.locks.comandoV4l2("/dev/video2");
+    const volta = LF.q("#cmd-v4l2-volta");
+    if (volta) volta.textContent = LF.nucleo.locks.comandoRestaura("/dev/video2");
     el.addEventListener("click", function (ev) {
       const a = ev.target.closest("[data-ir]");
       if (!a) return;

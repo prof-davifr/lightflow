@@ -56,6 +56,20 @@ export function plano(cap, desejado) {
   return { restricoes: restricoes, faltando: faltando, avisos: avisos };
 }
 
+/* The way back. A UVC camera keeps its controls after the stream closes, so a
+   lock outlives the page and the next program to open the camera inherits a
+   fixed exposure. Releasing hands each loop back to the camera, using the
+   automatic mode it declares. A camera that declares none has nothing to hand
+   back, and that mode is left alone. */
+export function solta(cap) {
+  cap = cap || {};
+  const restricoes = {};
+  ["exposureMode", "whiteBalanceMode", "focusMode"].forEach(function (k) {
+    if (lista(cap[k]).indexOf("continuous") >= 0) restricoes[k] = "continuous";
+  });
+  return restricoes;
+}
+
 function lista(v) { return Array.isArray(v) ? v : (v === undefined ? [] : [v]); }
 
 /* Clamps into the declared range and snaps onto the declared step. A value off
@@ -122,4 +136,27 @@ export function comandoV4l2(dev) {
   return "v4l2-ctl -d " + dev
     + " --set-ctrl=sharpness=0,gamma=100,backlight_compensation=0,"
     + "brightness=0,contrast=32,saturation=64";
+}
+
+/* Undoes comandoV4l2 and the browser lock together: every control either of
+   them touches goes back to the default the driver declares, read from the
+   camera itself rather than written in here. Nothing else is reset, so a
+   setting the operator chose, such as the 60 Hz mains filter, survives.
+
+   The automatic modes go last. A driver refuses a manual value while its
+   automatic mode is on, so the values have to be in place first. */
+export const CONTROLES_V4L2 = [
+  "brightness", "contrast", "saturation", "gamma", "sharpness",
+  "backlight_compensation", "exposure_time_absolute",
+  "white_balance_temperature", "focus_absolute",
+  "auto_exposure", "white_balance_automatic", "focus_automatic_continuous",
+];
+
+export function comandoRestaura(dev) {
+  dev = dev || "/dev/video2";
+  return "v4l2-ctl -d " + dev + " --list-ctrls | awk -v ordem=\""
+    + CONTROLES_V4L2.join(" ") + "\" "
+    + "'/default=/ { for (i = 1; i <= NF; i++) if ($i ~ /^default=/) p[$1] = substr($i, 9) } "
+    + "END { n = split(ordem, o, \" \"); for (k = 1; k <= n; k++) if (o[k] in p) print o[k] \"=\" p[o[k]] }' "
+    + "| xargs -I{} v4l2-ctl -d " + dev + " --set-ctrl={}";
 }

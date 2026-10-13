@@ -61,6 +61,12 @@ again**, and the program clears the dark and the reference when it changes.
   image-capture set and cannot be reached from any browser. `locks.comandoV4l2`
   builds the `v4l2-ctl` line; it has to run with the stream already open,
   because Chrome touches some controls when it opens one.
+- **The lock outlives the page.** A UVC camera keeps its controls after the
+  stream closes, so every program that opens it next gets a fixed exposure.
+  `locks.solta` (the Release button) returns the modes to `continuous`;
+  `locks.comandoRestaura` puts the controls either path touches back to the
+  default the driver declares, and nothing else — the 60 Hz mains filter here
+  is not the driver's default and must survive.
 - The Suyin HD Camera on this bench (`1e45:8022`, `/dev/video2`) has **no Gain
   control**. Exposure time is the only sensitivity knob. Do not build a gain UI.
 - `requestVideoFrameCallback`, not `requestAnimationFrame`. A background tab

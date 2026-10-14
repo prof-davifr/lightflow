@@ -104,6 +104,26 @@ again**, and the program clears the dark and the reference when it changes.
   widens a measured line profile, so an FWHM read off this instrument is
   slightly generous.
 
+## Calibration on a real lamp
+
+- **The bench shows a second order.** A wider copy of the spectrum sits beside
+  the first (here columns 0 to 330, the first order 520 to 900). A full-width
+  strip lets its peaks get marked and named as first-order lines.
+  `frame.faixaHorizontal` keeps the brightest order.
+- **The lines are curved along the slit.** The green line moves 8 columns
+  between the middle and the ends of the slit image, so the strip goes to the
+  middle (`frame.faixaVertical`), and a calibration belongs to its rows.
+- **Calibrate on R+G+B** (`calibration.sinal`). The green channel does not show
+  the red and blue lines of a lamp; the peak finder found one line in it.
+- **A tri-phosphor lamp has terbium.** 587.6 nm outshines the mercury pair nine
+  columns away, and 487.7 nm sits between blue and green. Unlisted, they take
+  mercury names; the preset lists them as checks.
+- **An exact fit proves nothing.** Order N through N+1 points has rms 0 whatever
+  the names; `calibration.avalia` judges a fit by its check lines as well.
+- `testes/teste_cfl_real.mjs` runs all of this on real frames
+  (`testes/dados/`). A synthetic lamp passed every test while the real one
+  failed.
+
 ## Numerics
 
 - `num.polyfit` centres and scales x before fitting and undoes the shift after.

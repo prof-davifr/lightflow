@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ajusta, toNm, toPx, eixo, dispersao, confere, nomeia, LINHAS, DUBLETO_HG }
-  from "../web/js/nucleo/calibration.js";
+import { ajusta, toNm, toPx, eixo, dispersao, confere, nomeia, avalia, sinal, LINHAS,
+  DUBLETO_HG } from "../web/js/nucleo/calibration.js";
 import { acha } from "../web/js/nucleo/peaks.js";
 import { polyval } from "../web/js/nucleo/num.js";
 
@@ -209,7 +209,7 @@ test("nomeia says so when the spacing cannot tell the direction", () => {
 });
 
 test("nomeia refuses more peaks than lines, and a single peak", () => {
-  assert.throws(() => nomeia([1, 2, 3, 4, 5, 6], PRESET_HG), /more marked peaks/);
+  assert.throws(() => nomeia([1, 2, 3, 4, 5, 6, 7, 8], PRESET_HG), /more marked peaks/);
   assert.throws(() => nomeia([100], PRESET_HG), /at least two peaks/);
 });
 
@@ -240,4 +240,61 @@ test("the lamp calibrates to a fraction of a nanometre through the whole path", 
     pior = Math.max(pior, Math.abs(ax[Math.round(p)] - lambda(Math.round(p))));
   }
   assert.ok(pior < 0.5, `worst error from 420 to 620 nm: ${pior} nm`);
+});
+
+test("nomeia keeps the direction it is given when the spacing cannot tell", () => {
+  const lasers = LINHAS.laser.pontos;
+  const r = nomeia([200, 550, 900], lasers, { crescente: false });
+  assert.equal(r.ambiguo, true);
+  assert.equal(r.crescente, false);
+  assert.deepEqual(r.linhas.map((l) => l.nm), [650, 532, 405]);
+});
+
+test("nomeia leaves out a peak that is no line of the source", () => {
+  const vistas = PRESET_HG.filter((p) => p.nm > 420);
+  const pxs = vistas.map((p) => colunaDe(p.nm));
+  pxs.push(colunaDe(660));                     // a line the lamp does not have
+  const r = nomeia(pxs, PRESET_HG);
+  assert.ok(r.confiavel);
+  assert.equal(r.fora, pxs.length - 1);
+  assert.equal(r.linhas[r.fora], null);
+  assert.deepEqual(r.linhas.slice(0, -1).map((l) => l.nm), vistas.map((p) => p.nm));
+});
+
+test("nomeia says when no naming fits", () => {
+  const r = nomeia([100, 130, 400, 410, 1000], PRESET_HG);
+  assert.equal(r.confiavel, false);
+  assert.ok(r.rmsCol > 3);
+});
+
+test("avalia trusts a fit whose checks land where they belong", () => {
+  const pontos = [404.66, 435.83, 546.07, DUBLETO_HG, 611.60].map((nm) => ({
+    px: colunaDe(nm), nm: nm, usar: nm !== 611.60,
+  }));
+  const av = avalia(ajusta(pontos, 2), NCOL);
+  assert.equal(av.suspeita, false);
+  assert.deepEqual(av.avisos, []);
+});
+
+test("avalia catches a wrong name the rms cannot see", () => {
+  /* Three fitted points and order 2: the fit is exact whatever the names. */
+  const pontos = [
+    { px: colunaDe(435.83), nm: 435.83 },
+    { px: colunaDe(546.07), nm: 546.07 },
+    { px: colunaDe(587.60), nm: DUBLETO_HG },   // the terbium band, misnamed
+    { px: colunaDe(611.60), nm: 611.60, usar: false },
+  ];
+  const cal = ajusta(pontos, 2);
+  assert.ok(cal.rms < 1e-6);
+  const av = avalia(cal, NCOL);
+  assert.equal(av.suspeita, true);
+  assert.match(av.motivos[0], /611\.6 nm/);
+  assert.match(av.avisos[0], /says nothing/);
+});
+
+test("the calibration signal is R+G+B, whatever the measurement channel", () => {
+  const m = { r: Float32Array.of(0.1, 0.5), g: Float32Array.of(0.2, 0.1), b: Float32Array.of(0.3, NaN) };
+  const y = sinal(m);
+  assert.ok(Math.abs(y[0] - 0.6) < 1e-6);
+  assert.ok(Number.isNaN(y[1]), "a missing column stays missing");
 });

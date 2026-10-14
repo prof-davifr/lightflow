@@ -42,9 +42,11 @@ Two constraints are worth knowing before you start.
 4. On the **Camera** tab, put the box over the stripe. Turn the angle until the
    peaks in the profile below are as narrow as they get, then raise **Rows
    binned** until the noise settles.
-5. Point the slit at a fluorescent tube. On **Calibration**, add the visible
-   peaks, press **Load its lines**, choose order 2 and press **Fit**. Accept it
-   when the rms is well under a nanometre.
+5. Point the slit at a fluorescent lamp. On **Calibration**, add four or five
+   peaks, press **Load its lines**, choose order 2 with three mercury lines or
+   order 1 with two, and press **Fit**. Accept it when the header says
+   calibrated and the unticked phosphor check lines land within a couple of
+   nanometres.
 6. Cover the slit and press **Capture dark**. Put the blank in and press
    **Capture reference**.
 7. The absorbance curve should now sit flat near zero. **That flat line is the

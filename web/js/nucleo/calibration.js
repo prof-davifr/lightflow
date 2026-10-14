@@ -17,25 +17,40 @@ export const DUBLETO_HG = 578.01;
 
 /* Reference lines, with the source that makes each set worth trusting.
 
-   The fluorescent lamp is the standard of the field for a reason: the four
-   mercury lines are narrow, they are bright, and every ceiling in the building
-   has one. The 611.6 nm band is europium in the phosphor coating; it is wider
-   than the mercury lines, so it is offered as a CHECK rather than a fit point —
-   leaving it out of the fit and then seeing where it lands is an independent
-   test that costs nothing. */
+   The fluorescent lamp is the standard of the field for a reason: the mercury
+   lines are narrow, they are bright, and every ceiling in the building has one.
+   The rest of what a lamp shows comes from the phosphor. The 611.6 nm band is
+   europium; it is wider than the mercury lines, so it is offered as a CHECK
+   rather than a fit point — leaving it out of the fit and then seeing where it
+   lands is an independent test that costs nothing.
+
+   A compact or tri-phosphor lamp adds terbium, and on this bench two terbium
+   bands outshine mercury lines: 487.7 nm, between the blue and the green, and
+   587.6 nm, nine columns from the yellow mercury pair and stronger than it.
+   Left out of the preset they still get marked, and then they take a mercury
+   name: the 587.6 band was named 578.01, the fit through three points was
+   exact, and the axis was 18 nm out at the red end. Listed, they are named for
+   what they are, and as wide phosphor bands they are checks too.
+
+   The 546.07 green line has terbium at 543.4 nm under it, unresolved at this
+   slit width. The second order splits the two at about equal height, so the
+   green point probably sits about a nanometre low. It stays a fit point: it is
+   the brightest line there is, and the checks will show it. */
 export const LINHAS = {
   fluorescent: {
-    rotulo: "Fluorescent lamp (mercury)",
-    nota: "Point the slit at any ceiling tube. Use the four mercury lines to "
-      + "fit, then check where 611.6 nm lands.",
+    rotulo: "Fluorescent lamp (mercury + phosphor)",
+    nota: "Point the slit at a ceiling tube or a compact lamp. Mercury lines "
+      + "fit; the phosphor bands at 487.7, 587.6 and 611.6 nm are checks.",
     pontos: [
       { nm: 404.66, rotulo: "Hg violet", ajuste: true },
       { nm: 435.83, rotulo: "Hg blue", ajuste: true },
+      { nm: 487.70, rotulo: "Tb blue-green (phosphor, wide)", ajuste: false },
       { nm: 546.07, rotulo: "Hg green", ajuste: true },
       /* Listed as two lines, the pair used to take two names: the hump got
          576.96 and the europium band, one peak further, got 579.07. The fit
          still looked good and the red end of the axis was 11 nm out. */
       { nm: DUBLETO_HG, rotulo: "Hg yellow pair (unresolved)", ajuste: true },
+      { nm: 587.60, rotulo: "Tb orange (phosphor, wide)", ajuste: false },
       { nm: 611.60, rotulo: "Eu red (phosphor, wide)", ajuste: false },
     ],
   },
@@ -62,6 +77,28 @@ export const LINHAS = {
   },
 };
 
+/* The signal the calibration screen looks at: R+G+B, linear.
+
+   Not the measurement channel. Green is right for measuring, because it is the
+   only channel at full resolution along the spectrum, but on this bench the
+   green channel does not see the red europium line or the blue mercury line
+   above the noise, and the peak finder found one line in it. A calibration
+   needs lines across the whole range, and every channel together has them. */
+export function sinal(m) {
+  const n = m.g.length, y = new Float32Array(n);
+  for (let i = 0; i < n; i++) y[i] = m.r[i] + m.g[i] + m.b[i];
+  return y;
+}
+
+/* How far, in columns, a straight line through the named peaks may miss before
+   the names are wrong. The curvature of a real grating costs about half a
+   column and a phosphor band about one; a wrong name costs tens. */
+export const LIMITE_COL = 3;
+
+/* Two namings whose straight lines both miss by less than this many columns
+   are equally good as far as the spacing can say. */
+const MESMA_COL = 1;
+
 /* Which reference line each marked peak is.
 
    Naming the k-th peak from the left as the k-th line breaks in the two ways a
@@ -78,24 +115,55 @@ export const LINHAS = {
    right one. The curvature of a real grating costs the right choice about half
    a nanometre; a wrong one costs tens.
 
-   `pxs` is the column of each marked peak, in any order. Returns
-   {linhas, crescente, rms, ambiguo}: `linhas[k]` is the line for `pxs[k]`,
-   `crescente` says wavelength grows with the column, and `ambiguo` says another
-   choice scored nearly as well — the case with three peaks and three evenly
-   spaced lines, where the data cannot tell the direction. Then the choice with
-   red on the right is kept. */
-export function nomeia(pxs, linhas) {
+   The best choice is not always a good one. A peak from the second order, or a
+   phosphor band the preset does not list, has no right name, and the best
+   straight line then misses by many columns. With five peaks or more, each one
+   is tried left out; if that brings the miss under LIMITE_COL, the peak stays
+   unnamed. Four is not enough: three peaks out of seven lines fit some
+   straight line by chance.
+
+   `pxs` is the column of each marked peak, in any order. `opc.crescente` is
+   the direction to keep when the data cannot tell, normally the direction of
+   the calibration already in use; without it, red on the right. Returns
+   {linhas, crescente, rms, rmsCol, ambiguo, confiavel, fora}: `linhas[k]` is
+   the line for `pxs[k]`, or null for the peak left out, whose index is `fora`
+   (-1 when none). `confiavel` is false when even the best names miss by more
+   than LIMITE_COL columns; then none of them should be used. */
+export function nomeia(pxs, linhas, opc) {
+  opc = opc || {};
   const n = pxs.length, L = linhas.length;
   if (n < 2) throw new Error("mark at least two peaks before naming them");
   if (n > L) {
     throw new Error("there are more marked peaks (" + n + ") than lines in this "
       + "source (" + L + ") — remove the extra ones first");
   }
+  const prefere = opc.crescente === undefined ? true : !!opc.crescente;
+  const ref = linhas.slice().sort(function (a, b) { return a.nm - b.nm; });
   const ordemPx = pxs.map(function (p, k) { return k; })
     .sort(function (a, b) { return pxs[a] - pxs[b]; });
-  const xs = ordemPx.map(function (k) { return pxs[k]; });
-  const ref = linhas.slice().sort(function (a, b) { return a.nm - b.nm; });
 
+  let r = escolhe(ordemPx, pxs, ref, prefere);
+  let fora = -1;
+  if (r.rmsCol > LIMITE_COL && n >= 5) {
+    for (let d = 0; d < n; d++) {
+      const s = escolhe(ordemPx.filter(function (k, pos) { return pos !== d; }),
+        pxs, ref, prefere);
+      if (s.rmsCol < r.rmsCol && s.rmsCol <= LIMITE_COL) { r = s; fora = ordemPx[d]; }
+    }
+  }
+
+  const out = new Array(n).fill(null);
+  r.ordem.forEach(function (k, pos) { out[k] = r.sel[pos]; });
+  return {
+    linhas: out, crescente: r.crescente, rms: r.rms, rmsCol: r.rmsCol,
+    ambiguo: r.ambiguo, confiavel: r.rmsCol <= LIMITE_COL, fora: fora,
+  };
+}
+
+/* The best naming of the peaks `ordem` (indices into pxs, left to right). */
+function escolhe(ordem, pxs, ref, prefere) {
+  const n = ordem.length, L = ref.length;
+  const xs = ordem.map(function (k) { return pxs[k]; });
   const cand = [];
   const escolha = [];
   (function combina(inicio) {
@@ -104,12 +172,13 @@ export function nomeia(pxs, linhas) {
         const sel = escolha.map(function (j) { return ref[j]; });
         if (!crescente) sel.reverse();
         const ys = sel.map(function (l) { return l.nm; });
-        let r = 0;
+        let r = 0, rc = 0;
         if (n >= 3) {
           const c = polyfit(xs, ys, 1);
           r = rms(ys.map(function (y, k) { return y - polyval(c, xs[k]); }));
+          rc = Math.abs(c[1]) > 0 ? r / Math.abs(c[1]) : Infinity;
         }
-        cand.push({ sel: sel, crescente: crescente, rms: r });
+        cand.push({ sel: sel, crescente: crescente, rms: r, rmsCol: rc });
       });
       return;
     }
@@ -120,15 +189,16 @@ export function nomeia(pxs, linhas) {
     }
   })(0);
 
-  cand.sort(function (a, b) { return a.rms - b.rms; });
-  const tol = Math.max(2 * cand[0].rms, 0.05);
-  const perto = cand.filter(function (c) { return c.rms <= tol; });
-  const ambiguo = perto.length > 1;
-  const fica = perto.filter(function (c) { return c.crescente; })[0] || cand[0];
-
-  const out = new Array(n);
-  ordemPx.forEach(function (k, pos) { out[k] = fica.sel[pos]; });
-  return { linhas: out, crescente: fica.crescente, rms: fica.rms, ambiguo: ambiguo };
+  /* Plausible is within a column of a straight line, or twice the best miss.
+     Measured in columns and not in nanometres: with three peaks and seven
+     lines, 404.66, 435.83 and 487.7 nm fall on this bench's three brightest
+     peaks within a tenth of a column, as straight as the right names, at half
+     the dispersion. Nothing in the spacing can tell those two apart. */
+  cand.sort(function (a, b) { return a.rmsCol - b.rmsCol; });
+  const tol = Math.max(2 * cand[0].rmsCol, MESMA_COL);
+  const perto = cand.filter(function (c) { return c.rmsCol <= tol; });
+  const fica = perto.filter(function (c) { return c.crescente === prefere; })[0] || cand[0];
+  return Object.assign({ ordem: ordem, ambiguo: perto.length > 1 }, fica);
 }
 
 /* Least-squares fit of wavelength against column index.
@@ -204,6 +274,43 @@ export function toPx(cal, nm, n) {
 export function dispersao(cal, n) {
   const m = n >> 1;
   return polyval(cal.coef, m + 0.5) - polyval(cal.coef, m - 0.5);
+}
+
+/* Whether a fit can call itself calibrated.
+
+   The rms of the fitted points is not enough. Order N through exactly N+1
+   points passes through every one of them, so its rms is zero whatever names
+   they carry. On this bench three points named with one wrong name fitted
+   exactly, the screen said calibrated, and the europium check line landed
+   18 nm from where it belongs. The checks are the test the rms cannot be: a
+   check line more than LIMITE_COL columns off makes the fit suspect too.
+
+   Returns {suspeita, motivos, avisos}: `motivos` say why it is suspect,
+   `avisos` are things the operator should know that do not make it so. */
+export function avalia(cal, nCol) {
+  const d = Math.abs(dispersao(cal, nCol));
+  const lim = LIMITE_COL * d;
+  const motivos = [], avisos = [];
+  if (cal.rms > lim) {
+    motivos.push("the residuals are several columns wide, which normally means "
+      + "one peak was matched to the wrong line, not that the order is too low");
+  }
+  let checks = 0;
+  (cal.pontos || []).forEach(function (p, k) {
+    if (p.usar !== false || !isFinite(p.nm)) return;
+    checks++;
+    const r = cal.residuos[k];
+    if (isFinite(r) && Math.abs(r) > lim) {
+      motivos.push("the check line at " + p.nm + " nm lands " + Math.abs(r).toFixed(1)
+        + " nm away from it");
+    }
+  });
+  if (cal.n === cal.ordem + 1) {
+    avisos.push("order " + cal.ordem + " on " + cal.n + " points passes through "
+      + "every one of them, so its rms says nothing"
+      + (checks ? "; the check lines are the test" : "; mark another line"));
+  }
+  return { suspeita: motivos.length > 0, motivos: motivos, avisos: avisos };
 }
 
 /* A calibration belongs to one mechanical setup and one ROI. Comparing the

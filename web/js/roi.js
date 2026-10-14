@@ -37,33 +37,21 @@ LF.roi = (function () {
     return isFinite(x) ? x : padrao;
   }
 
-  /* Centres a full-width strip on the brightest rows of the frame, which is the
-     stripe. Saves the operator from hunting for it by hand the first time. */
+  /* Centres the strip on the stripe, across the brightest spectral order only.
+     A second order beside the first gets its own peaks marked and named as
+     first-order lines; `frame.faixaHorizontal` explains how it is left out, and
+     `frame.faixaVertical` why the strip goes to the middle of the slit image. */
   function centraNaFaixa() {
     const img = LF.camera.quadroInteiro();
     if (!img) { LF.mensagem("open the camera first", true); return; }
-    const W = img.width, H = img.height, D = img.data;
-    const perfil = new Float64Array(H);
-    for (let y = 0; y < H; y++) {
-      let s = 0;
-      /* Every eighth column is plenty to find a horizontal band. */
-      for (let x = 0; x < W; x += 8) {
-        const o = (y * W + x) * 4;
-        s += D[o] + D[o + 1] + D[o + 2];
-      }
-      perfil[y] = s;
-    }
-    /* The window of `h` rows with the most light in it. */
-    const h = Math.min(roi.h, H);
-    let soma = 0;
-    for (let y = 0; y < h; y++) soma += perfil[y];
-    let melhor = soma, ondeY = 0;
-    for (let y = h; y < H; y++) {
-      soma += perfil[y] - perfil[y - h];
-      if (soma > melhor) { melhor = soma; ondeY = y - h + 1; }
-    }
-    set({ x: 0, y: ondeY, w: W, h: h, angle: roi.angle });
-    LF.mensagem("strip centred on rows " + ondeY + " to " + (ondeY + h - 1));
+    const F = LF.nucleo.frame;
+    const h = Math.min(roi.h, img.height);
+    const y = F.faixaVertical(F.perfilLinhas(img), h);
+    const c = F.faixaHorizontal(F.perfilColunas(img, y, h));
+    set({ x: c.x, y: y, w: c.w, h: h, angle: roi.angle });
+    LF.mensagem("strip centred on rows " + y + " to " + (y + h - 1)
+      + (c.w < img.width ? ", columns " + c.x + " to " + (c.x + c.w - 1)
+        + " (the brightest order; Full width takes them all)" : ""));
   }
 
   function larguraToda() {

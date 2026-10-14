@@ -5,17 +5,34 @@ Every item says what to check and where, so none of it has to be found again.
 
 ## On the bench, with the real instrument
 
-The calibration work was driven end to end in Chrome against a synthetic
-fluorescent tube of known dispersion, never against the Suyin camera and a real
-ceiling tube. That run is the acceptance test the fixes still owe:
+Frames of a real compact fluorescent lamp were captured on 13 October 2026 and
+`testes/teste_cfl_real.mjs` now runs the calibration on them. They answered two
+of the three bench questions:
 
-- Does the yellow mercury pair come out as one hump at this slit width? The
-  preset now names it 578.01 nm, one line. If two humps do show, mark one only,
-  or type both wavelengths by hand.
-- Does `Load its lines` name the lines correctly with the violet line too faint
-  to mark, and with the tube at both ends of the sensor?
+- The yellow mercury pair is one hump, at about column 641. But a terbium band
+  at 587.6 nm sits nine columns from it and is brighter; that is the orange
+  peak the button marks first. The preset now names it.
+- `Load its lines` names four or five real peaks correctly with the violet line
+  unmarked and the red end on the left. Three peaks stay ambiguous.
+
+Still owed, with a blank in the cuvette:
+
 - After a fit, is the absorbance of the blank flat near zero? That flat line is
   the proof of the whole chain, not the rms.
+
+## Found on the real lamp and not fixed
+
+- **The green point is probably a nanometre low.** Terbium 543.4 nm sits under
+  mercury 546.07 at this slit width; the second order splits them at about equal
+  height. Both checks, violet 404.66 and terbium 487.7, land 1 nm low. A
+  blended value for that point would fix it, but the ratio belongs to the lamp.
+- **A line centre moves 0.3 columns between 80 and 320 ms with nothing
+  clipped.** The camera's gamma control was at 400, so the camera's curve may
+  not be the sRGB one the program undoes. Measure the curve before trusting
+  sub-column positions.
+- **`Centre on the stripe` runs on every camera open.** It now also sets the
+  columns, so the ROI, and with it the signature of a saved calibration, may
+  change between sessions on a lamp that flickers near the thresholds.
 
 ## Faults found and not fixed
 

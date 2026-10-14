@@ -126,10 +126,12 @@ LF.telas.ajuda = (function () {
         <li>On the <b>Camera</b> tab, put the box over the stripe. Turn the
           angle until the peaks in the profile below are as narrow as they get,
           then raise <b>Rows binned</b> until the noise settles.</li>
-        <li>Point the slit at a fluorescent tube. On <b>Calibration</b>, press
-          <b>Add the strongest unused peak</b> once per visible line, press
-          <b>Load its lines</b>, choose order 2, and press <b>Fit</b>. Accept it
-          when the rms is well under a nanometre.</li>
+        <li>Point the slit at a fluorescent lamp. On <b>Calibration</b>, press
+          <b>Add the strongest unused peak</b> four or five times, press
+          <b>Load its lines</b>, choose order 2 with three mercury lines or
+          order 1 with two, and press <b>Fit</b>. Accept it when the header says
+          calibrated and the unticked check lines land within a couple of
+          nanometres.</li>
         <li>Cover the slit and press <b>Capture dark</b>. Put the blank in and
           press <b>Capture reference</b>.</li>
         <li>The absorbance curve should now sit flat near zero. That flat line
@@ -192,7 +194,22 @@ LF.telas.ajuda = (function () {
       <p>A fluorescent tube is the standard source for this, and there is one in
         almost every ceiling. Its mercury lines are narrow, bright, and at known
         wavelengths: 404.66, 435.83, 546.07 and the yellow pair at 576.96 and
-        579.07 nm. The broad red band at 611.6 nm comes from the phosphor.</p>
+        579.07 nm. The rest comes from the phosphor: europium at 611.6 nm and,
+        in a compact or tri-phosphor lamp, terbium at 487.7 and 587.6 nm. The
+        phosphor bands are wider, so the preset names them but leaves them out
+        of the fit as checks.</p>
+      <p><b>The terbium band at 587.6 nm is brighter than the mercury pair</b>
+        and only nine columns from it on a typical bench. It is the orange peak
+        you mark first; the mercury pair is the fainter one beside it, towards
+        the green. The terbium line at 543.4 nm sits under the green mercury
+        line and cannot be separated, which pulls that point about a nanometre
+        low.</p>
+      <p><b>The screen looks at R+G+B</b>, not at the measurement channel.
+        Green alone does not show the red and blue lines of a lamp.</p>
+      <p><b>Keep the second order out.</b> A grating throws a second, wider
+        copy of the spectrum beside the first. <b>Centre on the stripe</b>
+        keeps the strip on the brightest order only; with <b>Full width</b>,
+        second-order peaks can be marked, and they have no right name.</p>
       <p><b>The yellow pair is 2.1 nm apart</b> and almost nothing homemade
         resolves it, so the preset lists it as one line at 578.01 nm, its
         midpoint. Picking one of the two writes a nanometre of error into the
@@ -202,19 +219,24 @@ LF.telas.ajuda = (function () {
         their order, so a faint violet line left unmarked or a red end on the
         left of the sensor still gets the right names. With only three peaks the
         spacing can fit more than one set of lines; the footer says so, and then
-        one more peak settles it.</p>
+        one more peak settles it. With five or more, a peak that is no line of
+        the source is left unnamed; when nothing fits, nothing is named.</p>
       <p><b>Order 2 is right nearly always.</b> The grating equation is a sine,
         and over the fan a small grating covers, its departure from a straight
         line is a quadratic to well under a tenth of a nanometre. Order 1 exists
-        so a two-laser calibration is possible; order 3 is for a badly tilted
-        camera.</p>
+        so a two-laser calibration is possible, and for a lamp where only two
+        mercury lines show; order 3 is for a badly tilted camera.</p>
       <p><b>Read the residuals, not just the rms.</b> One point far out means a
         peak was matched to the wrong line. Raising the order will hide that and
         give a smooth wrong answer.</p>
-      <p><b>Keep one line out of the fit.</b> Leave the 611.6 nm band unticked,
-        fit on the mercury lines, and then look at where 611.6 lands. A point
-        that was not fitted cannot be flattered by the fit, so that residual is
-        the only independent check the calibration gets.</p>`;
+      <p><b>Keep lines out of the fit.</b> The preset leaves the phosphor bands
+        unticked: fit on the mercury lines, and then look at where the bands
+        land. A point that was not fitted cannot be flattered by the fit, so
+        those residuals are the only independent check the calibration gets.
+        With as many fitted points as the order plus one, the fit passes through
+        all of them and its rms is zero whatever their names; then the checks
+        are the whole test, and a check more than three columns out marks the
+        calibration suspect.</p>`;
     } },
 
     { id: "kinetics", rot: "Following a reaction", html: function () {

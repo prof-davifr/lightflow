@@ -116,8 +116,12 @@ export function extract(img, roi, lut, limiar) {
       const v = j - (h - 1) / 2;
       const px = cx + u * co - v * si;
       const py = cy + u * si + v * co;
-      const x0 = Math.floor(px), y0 = Math.floor(py);
-      if (x0 < 0 || y0 < 0 || x0 + 1 >= W || y0 + 1 >= H) continue;
+      if (px < 0 || py < 0 || px > W - 1 || py > H - 1) continue;
+      /* The bilinear read takes one pixel to the right and one below. A sample
+         sitting exactly on the last column or row borrows the pixel before and
+         gives it zero weight. Refusing it instead left the last column of every
+         full-width ROI NaN. */
+      const x0 = Math.min(Math.floor(px), W - 2), y0 = Math.min(Math.floor(py), H - 2);
       const fx = px - x0, fy = py - y0;
       const o00 = (y0 * W + x0) * 4, o10 = o00 + 4;
       const o01 = o00 + W * 4, o11 = o01 + 4;
@@ -147,6 +151,114 @@ export function extract(img, roi, lut, limiar) {
 }
 
 export const CANAIS = ["r", "g", "b", "lum"];
+
+/* ------------------------------------------------------ finding the stripe
+
+   The lit stripe on this bench is not one band. A grating throws the second
+   order beside the first, with twice the spread, and the camera catches both:
+   here the first order sits on columns 580 to 840 and the second on 0 to 330.
+   A full-width strip hands both to the peak finder, which then names a
+   second-order green line as the violet one.
+
+   Vertically the stripe is the image of the slit, and the lines are curved
+   along it: on this bench the green line moves 8 columns between the middle and
+   the ends. The middle is where the curve is flattest, so the strip goes there,
+   not on the brightest rows, which were a dusty band at the bottom edge. */
+
+/* Light per image row, R+G+B, on every `passo`-th column. */
+export function perfilLinhas(img, passo) {
+  passo = passo || 8;
+  const W = img.width, H = img.height, D = img.data;
+  const p = new Float64Array(H);
+  for (let y = 0; y < H; y++) {
+    let s = 0;
+    for (let x = 0; x < W; x += passo) {
+      const o = (y * W + x) * 4;
+      s += D[o] + D[o + 1] + D[o + 2];
+    }
+    p[y] = s;
+  }
+  return p;
+}
+
+/* Light per image column, R+G+B, over rows y0 to y0+h-1. */
+export function perfilColunas(img, y0, h) {
+  const W = img.width, H = img.height, D = img.data;
+  const p = new Float64Array(W);
+  for (let y = Math.max(0, y0); y < Math.min(H, y0 + h); y++) {
+    for (let x = 0; x < W; x++) {
+      const o = (y * W + x) * 4;
+      p[x] += D[o] + D[o + 1] + D[o + 2];
+    }
+  }
+  return p;
+}
+
+function suaviza(p, r) {
+  const n = p.length, s = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    let t = 0, k = 0;
+    for (let j = Math.max(0, i - r); j <= Math.min(n - 1, i + r); j++) { t += p[j]; k++; }
+    s[i] = t / k;
+  }
+  return s;
+}
+
+/* Runs above `frac` of the way from the floor to the top, with gaps shorter
+   than `ponte` bridged: the dark bands that dust on the slit draws across the
+   stripe are not edges. Each run carries the light above the floor in it. */
+function trechos(p, frac, ponte) {
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < p.length; i++) { lo = Math.min(lo, p[i]); hi = Math.max(hi, p[i]); }
+  const lim = lo + frac * (hi - lo);
+  const out = [];
+  for (let i = 0; i < p.length; i++) {
+    if (!(p[i] > lim)) continue;
+    const ult = out[out.length - 1];
+    if (ult && i - ult.b <= ponte) ult.b = i;
+    else out.push({ a: i, b: i, luz: 0 });
+  }
+  out.forEach(function (t) {
+    for (let i = t.a; i <= t.b; i++) t.luz += p[i] - lo;
+  });
+  return out;
+}
+
+/* Top row of an `h`-row strip centred on the stripe. The run that holds the
+   brightest row is the stripe; its middle is the strip's middle. */
+export function faixaVertical(perfil, h) {
+  const H = perfil.length;
+  h = Math.min(h, H);
+  const s = suaviza(perfil, 4);
+  let topo = 0;
+  for (let i = 1; i < H; i++) if (s[i] > s[topo]) topo = i;
+  const t = trechos(s, 0.2, 15).filter(function (r) { return r.a <= topo && topo <= r.b; })[0];
+  if (!t) return Math.max(0, Math.min(H - h, topo - ((h - 1) >> 1)));
+  const y = Math.round((t.a + t.b) / 2 - (h - 1) / 2);
+  return Math.max(0, Math.min(H - h, y));
+}
+
+/* Columns of the brightest spectral order, {x, w}. With one lit run, or none
+   apart, the whole width comes back, which is what it was before.
+
+   A gap inside one order is the dark between two lines, up to 90 columns here
+   with a line lamp at short exposure; the gap between the orders is 250. A
+   tenth of the width bridges the first and not the second. The margin keeps
+   the faint ends, the violet line among them, inside the strip when the
+   exposure goes up, and it stops halfway across the gap to the next order. */
+export function faixaHorizontal(perfil) {
+  const N = perfil.length;
+  const s = suaviza(perfil, 4);
+  const t = trechos(s, 0.05, Math.round(N / 10));
+  if (t.length < 2) return { x: 0, w: N };
+  let k = 0;
+  for (let i = 1; i < t.length; i++) if (t[i].luz > t[k].luz) k = i;
+  const m = Math.max(32, Math.round(0.25 * (t[k].b - t[k].a)));
+  const minA = k > 0 ? Math.ceil((t[k - 1].b + t[k].a) / 2) : 0;
+  const maxB = k < t.length - 1 ? Math.floor((t[k].b + t[k + 1].a) / 2) : N - 1;
+  const a = Math.max(minA, t[k].a - m), b = Math.min(maxB, t[k].b + m);
+  return { x: a, w: b - a + 1 };
+}
 
 /* Running mean of N extracted lines. The camera is noisy and a line is cheap to
    repeat, so this is the operator's main noise knob.

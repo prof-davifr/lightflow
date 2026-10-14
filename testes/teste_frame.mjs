@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   toLinear, fromLinear, makeLut, makeRoi, extract, Acumulador,
-  LIMIAR_SATUR, assinatura,
+  LIMIAR_SATUR, assinatura, faixaVertical, faixaHorizontal,
 } from "../web/js/nucleo/frame.js";
 
 test("the sRGB transfer inverts itself", () => {
@@ -201,4 +201,37 @@ test("the signature changes when the geometry changes", () => {
   assert.notEqual(a, assinatura(makeRoi(10, 20, 100, 30, 2), 640, 480));
   assert.notEqual(a, assinatura(makeRoi(10, 20, 100, 30, 3), 1280, 720));
   assert.notEqual(a, assinatura(makeRoi(11, 20, 100, 30, 2), 1280, 720));
+});
+
+test("the last column of a full-width strip is read, not NaN", () => {
+  const W = 20, H = 10;
+  const d = new Uint8ClampedArray(W * H * 4).fill(128);
+  for (let y = 0; y < H; y++) d[(y * W + W - 1) * 4 + 1] = 255;
+  const s = extract({ data: d, width: W, height: H }, makeRoi(0, 0, W, H, 0), makeLut());
+  assert.ok(Math.abs(s.g[W - 1] - 1) < 1e-6, `got ${s.g[W - 1]}`);
+  assert.ok(Math.abs(s.g[W - 2] - makeLut()[128]) < 1e-6, "the column before is untouched");
+  assert.equal(s.used[W - 1], H);
+});
+
+test("faixaVertical centres on the stripe, not on its brightest band", () => {
+  const p = new Float64Array(200).fill(10);
+  for (let y = 60; y <= 140; y++) p[y] = 100;
+  for (let y = 120; y <= 135; y++) p[y] = 300;      // a bright band near the edge
+  for (let y = 90; y <= 95; y++) p[y] = 40;         // a dusty dark band inside
+  assert.equal(faixaVertical(p, 21), 90);           // middle of 60..140 is 100
+});
+
+test("faixaHorizontal keeps the brightest order and drops the other", () => {
+  const p = new Float64Array(1000).fill(5);
+  for (let x = 50; x < 250; x += 40) p[x] = 60;     // second order: sparse, faint
+  for (const x of [600, 640, 700, 760, 800]) p[x] = 400;   // first order lines
+  const { x, w } = faixaHorizontal(p);
+  assert.ok(x > 250 && x < 600, `starts at ${x}`);
+  assert.ok(x + w - 1 > 800, `ends at ${x + w - 1}`);
+});
+
+test("faixaHorizontal keeps the whole width when only one order is lit", () => {
+  const p = new Float64Array(500).fill(5);
+  for (let x = 100; x < 400; x++) p[x] = 100;
+  assert.deepEqual(faixaHorizontal(p), { x: 0, w: 500 });
 });

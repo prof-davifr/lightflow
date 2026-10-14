@@ -5,11 +5,14 @@
    tube, press "Add the strongest unused peak" a few times, press "Load its
    lines" to name them, fit, and read the residuals. Naming works because a
    grating puts wavelength monotonically and almost linearly along the sensor,
-   so the peaks keep the spacing pattern of the lines. */
+   so the peaks keep the spacing pattern of the lines.
+
+   The screen looks at R+G+B, not at the measurement channel: green alone does
+   not show the red and blue lines of a lamp. `calibration.sinal` says why. */
 
 LF.telas.calibracao = (function () {
   let plot = null, plotRes = null, pendente = false;
-  let pontos = [], ultimoY = null, ultimoAjuste = null;
+  let pontos = [], ultimoY = null, ultimoClip = null, ultimoAjuste = null;
 
   /* ------------------------------------------------------------ the plot */
 
@@ -20,7 +23,7 @@ LF.telas.calibracao = (function () {
       cursor: { drag: { x: true, y: false } },
       scales: { x: { time: false } },
       axes: [LF.eixo("Column (px)", 0), LF.eixo("Linear intensity", "auto")],
-      series: [{}, LF.serie("signal", LF.cor.seq[2])],
+      series: [{}, LF.serie("R+G+B", LF.cor.seq[2])],
       hooks: {
         draw: [function (u) {
           /* Every marked point gets a line, so it is obvious which peaks are
@@ -67,7 +70,8 @@ LF.telas.calibracao = (function () {
   }
 
   function aoEspectro(m) {
-    ultimoY = m[LF.estado.canal];
+    ultimoY = LF.nucleo.calibration.sinal(m);
+    ultimoClip = m.clip;
     if (LF.telaAtual !== "calibracao" || pendente) return;
     pendente = true;
     requestAnimationFrame(function () { pendente = false; pinta(); });
@@ -91,10 +95,22 @@ LF.telas.calibracao = (function () {
       LF.mensagem("there is already a point within three columns of that one");
       return;
     }
-    pontos.push({ px: px, nm: NaN, rotulo: "", usar: true });
+    /* A clipped line has a flat top, and its centre moves with the exposure:
+       0.7 columns on this bench between 80 ms and 1 s. */
+    let satura = false;
+    if (ultimoClip) {
+      for (let k = Math.max(0, i - 4); k <= Math.min(ultimoClip.length - 1, i + 4); k++) {
+        if (ultimoClip[k]) satura = true;
+      }
+    }
+    pontos.push({ px: px, nm: NaN, rotulo: "", usar: true, satura: satura });
     pontos.sort(function (a, b) { return a.px - b.px; });
     mostraTabela();
     plot.redraw();
+    if (satura) {
+      LF.mensagem("that peak is clipped, so its centre is not reliable — shorten "
+        + "the exposure and mark it again", true);
+    }
   }
 
   function maisForte() {
@@ -116,7 +132,8 @@ LF.telas.calibracao = (function () {
       const res = ultimoAjuste && ultimoAjuste.residuos[k];
       tr.innerHTML =
         '<td><input type="checkbox" ' + (p.usar === false ? "" : "checked") + "></td>"
-        + '<td class="num">' + LF.num(p.px, 2) + "</td>"
+        + '<td class="num' + (p.satura ? ' ruim" title="clipped' : "") + '">'
+        + LF.num(p.px, 2) + "</td>"
         + '<td><input type="number" step="0.01" list="linhas-preset" value="'
         + (isFinite(p.nm) ? p.nm : "") + '"></td>'
         + '<td><input type="text" value="' + (p.rotulo || "") + '"></td>'
@@ -176,27 +193,44 @@ LF.telas.calibracao = (function () {
 
   /* Names the marked peaks by matching their spacing to the source's lines, in
      either direction along the sensor, so a faint line left unmarked or a red
-     end on the left does not shift every name. `nomeia` explains the rule. A
-     peak marked twice still breaks it; the residuals afterwards catch that. */
+     end on the left does not shift every name. `nomeia` explains the rule.
+     When the spacing cannot tell the direction, the calibration in use can. */
   function carregaLinhas() {
     const p = presetAtual();
     if (!p) return;
+    const N = LF.nucleo.calibration;
+    const opc = {};
+    if (LF.estado.cal && LF.estado.nCol) {
+      opc.crescente = N.dispersao(LF.estado.cal, LF.estado.nCol) > 0;
+    }
     let r;
     try {
-      r = LF.nucleo.calibration.nomeia(pontos.map(function (q) { return q.px; }), p.pontos);
+      r = N.nomeia(pontos.map(function (q) { return q.px; }), p.pontos, opc);
     } catch (e) {
       LF.mensagem(e.message, true);
       return;
     }
+    if (!r.confiavel) {
+      LF.mensagem("the spacing of these peaks fits no set of this source's lines: "
+        + "the best straight line misses by " + LF.num(r.rmsCol, 1) + " columns. "
+        + "Some of them are not lines of this lamp, or come from the second "
+        + "order — remove them and name again", true);
+      return;
+    }
     pontos.forEach(function (q, k) {
-      q.nm = r.linhas[k].nm;
-      q.rotulo = r.linhas[k].rotulo;
-      q.usar = r.linhas[k].ajuste !== false;
+      const l = r.linhas[k];
+      q.nm = l ? l.nm : NaN;
+      q.rotulo = l ? l.rotulo : "not a line of this source";
+      q.usar = !!l && l.ajuste !== false;
     });
     mostraTabela();
     plot.redraw();
     const lado = r.crescente ? "red end on the right" : "red end on the left";
-    if (r.ambiguo) {
+    if (r.fora >= 0) {
+      LF.mensagem("named " + (pontos.length - 1) + " peaks by their spacing (" + lado
+        + "); the peak at column " + LF.num(pontos[r.fora].px, 1) + " is no line "
+        + "of this source and is left out — check the labels before fitting", true);
+    } else if (r.ambiguo) {
       LF.mensagem("named " + pontos.length + " peaks, but the spacing fits more than "
         + "one set of lines — assumed " + lado + ". Check each label, or mark "
         + "another peak", true);
@@ -209,9 +243,8 @@ LF.telas.calibracao = (function () {
   /* ---------------------------------------------------------------- fit */
 
   function ajusta() {
-    const bons = pontos.filter(function (p) { return isFinite(p.nm); });
-    if (bons.length !== pontos.length) {
-      LF.mensagem("every marked peak needs a wavelength", true);
+    if (pontos.some(function (p) { return p.usar !== false && !isFinite(p.nm); })) {
+      LF.mensagem("every peak used in the fit needs a wavelength", true);
       return;
     }
     const ordem = parseInt(LF.q("#ordem").value, 10);
@@ -237,16 +270,6 @@ LF.telas.calibracao = (function () {
     plotRes.setData([xs, cal.residuos]);
     LF.ajusta(plotRes, LF.q("#g-residuos"));
 
-    /* A residual much larger than a column's worth of wavelength means a peak
-       was named as the wrong line; the fit itself cannot tell you that. */
-    const av = LF.q("#aviso-cal");
-    if (cal.rms > Math.abs(d) * 3) {
-      av.textContent = "The residuals are several columns wide. That normally "
-        + "means one peak was matched to the wrong line, not that the order is "
-        + "too low. Check the labels before raising the order.";
-    } else {
-      av.textContent = "";
-    }
     LF.mensagem("fitted order " + ordem + " on " + cal.n + " points, rms "
       + LF.num(cal.rms, 3) + " nm");
   }
@@ -256,14 +279,19 @@ LF.telas.calibracao = (function () {
     LF.estado.eixo = LF.nucleo.calibration.eixo(cal, LF.estado.nCol);
     const problemas = LF.nucleo.calibration.confere(cal, LF.estado.assinatura, LF.estado.nCol);
     /* The axis is applied either way, so the operator can see what the fit
-       does, but a fit whose residuals span several columns does not get to
-       call itself calibrated. */
-    const d = LF.nucleo.calibration.dispersao(cal, LF.estado.nCol);
-    const suspeita = cal.rms > Math.abs(d) * 3;
+       does, but a fit with a wrong name in it does not get to call itself
+       calibrated. `avalia` says what counts as one. */
+    const av = LF.nucleo.calibration.avalia(cal, LF.estado.nCol);
     if (problemas.length) LF.selo("#selo-cal", "calibration stale", "mau");
-    else if (suspeita) LF.selo("#selo-cal", "calibration suspect", "mau");
+    else if (av.suspeita) LF.selo("#selo-cal", "calibration suspect", "mau");
     else LF.selo("#selo-cal", "calibrated", "ok");
-    if (problemas.length) LF.q("#aviso-cal").textContent = problemas.join("; ");
+    const texto = problemas.concat(av.motivos, av.avisos);
+    if ((cal.pontos || []).some(function (p) { return p.satura && p.usar !== false; })) {
+      texto.push("a fitted peak is clipped; shorten the exposure and mark it again");
+    }
+    LF.q("#aviso-cal").textContent = texto.length
+      ? texto.join("; ").replace(/^./, function (c) { return c.toUpperCase(); }) + "."
+      : "";
     LF.telas.espectro.redesenha();
     LF.telas.cinetica.recalibra();
   }

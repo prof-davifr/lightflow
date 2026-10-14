@@ -215,44 +215,91 @@
 <section class="tela" id="tela-calibracao">
   <div class="cabeca">
     <h2>Wavelength calibration</h2>
-    <span id="rot-rms" class="marca">—</span>
+    <span id="rot-rms" class="marca">not fitted</span>
     <button class="ajuda" data-ir="calibration">?</button>
   </div>
-  <div class="barra-acao">
-    <label for="preset">Reference source</label>
-    <select id="preset"></select>
-    <button id="bt-preset">Load its lines</button>
-    <span class="sep"></span>
-    <label for="ordem">Order</label>
-    <select id="ordem"><option>1</option><option selected>2</option><option>3</option></select>
-    <button id="bt-ajustar" class="primario">Fit</button>
-    <span class="sep"></span>
-    <button id="bt-cal-salvar">Save</button>
-    <button id="bt-cal-json">Export</button>
-    <button id="bt-cal-limpar">Clear points</button>
-  </div>
-  <p id="nota-preset" class="nota"></p>
+  <!-- One step at a time: the screen marks the step to do next and gives its
+       button the primary colour, so the order of the work is on the screen. -->
+  <ol id="passos-cal" class="passos">
+    <li data-passo="1">
+      <span class="num">1</span>
+      <div class="corpo">
+        <span class="titulo">Mark the peaks</span>
+        <div class="acoes">
+          <button id="bt-cal-achar" data-principal>Find peaks</button>
+          <button id="bt-cal-adicionar" title="Mark the strongest peak not marked yet">+ One more</button>
+        </div>
+        <span class="dica">or click a peak on the chart</span>
+      </div>
+    </li>
+    <li data-passo="2">
+      <span class="num">2</span>
+      <div class="corpo">
+        <span class="titulo">Name them</span>
+        <div class="acoes">
+          <select id="preset" title="Reference source"></select>
+          <button id="bt-preset" data-principal>Name</button>
+        </div>
+        <span id="nota-preset" class="dica corta"></span>
+      </div>
+    </li>
+    <li data-passo="3">
+      <span class="num">3</span>
+      <div class="corpo">
+        <span class="titulo">Fit</span>
+        <div class="acoes">
+          <label for="ordem">Order</label>
+          <select id="ordem">
+            <option value="auto" selected>auto</option>
+            <option>1</option><option>2</option><option>3</option>
+          </select>
+          <button id="bt-ajustar" data-principal>Fit</button>
+        </div>
+        <span id="dica-ordem" class="dica">auto picks 1 or 2</span>
+      </div>
+    </li>
+    <li data-passo="4">
+      <span class="num">4</span>
+      <div class="corpo">
+        <span class="titulo">Check</span>
+        <span id="res-cal" class="resultado">—</span>
+        <span id="dica-check" class="dica">the unticked lines are the test</span>
+      </div>
+    </li>
+    <li data-passo="5">
+      <span class="num">5</span>
+      <div class="corpo">
+        <span class="titulo">Save</span>
+        <div class="acoes">
+          <button id="bt-cal-salvar" data-principal>Save</button>
+          <button id="bt-cal-json">Export</button>
+        </div>
+        <span class="dica">for later sessions</span>
+      </div>
+    </li>
+  </ol>
+  <p id="estado-cal" class="estado"></p>
   <p id="aviso-cal" class="aviso"></p>
   <div class="duas enche">
     <div class="caixa cresce">
-      <h3>Click a peak to add a point</h3>
+      <h3>R+G+B of the strip — click a peak to mark it</h3>
       <div id="g-cal" class="grafico"></div>
     </div>
     <div class="caixa">
-      <h3>Points</h3>
+      <div class="cabeca">
+        <h3>Points</h3>
+        <button id="bt-cal-limpar" class="direita">Clear points</button>
+      </div>
       <table id="tab-cal" class="tabela">
-        <thead><tr><th>Use</th><th>Column</th><th>nm</th><th>Line</th><th data-termo="residual">Residual</th><th></th></tr></thead>
+        <thead><tr><th title="Ticked: fitted. Unticked: a check line, or a peak left out.">Role</th><th>Column</th><th>nm</th><th>Line</th><th data-termo="residual">Residual</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
-      <div class="linha-bt">
-        <button id="bt-cal-adicionar">Add the strongest unused peak</button>
-      </div>
-      <h3>Saved calibrations</h3>
+      <h3 class="sub">Saved calibrations</h3>
       <table id="tab-cal-salvas" class="tabela"><tbody></tbody></table>
     </div>
   </div>
   <div class="caixa">
-    <h3>Residuals (nm)</h3>
+    <h3>Residuals (nm) — filled: fitted lines, open: checks, dashed: the limit</h3>
     <div id="g-residuos" class="grafico baixo"></div>
   </div>
 </section>

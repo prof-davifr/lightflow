@@ -12,8 +12,9 @@ of the three bench questions:
 - The yellow mercury pair is one hump, at about column 641. But a terbium band
   at 587.6 nm sits nine columns from it and is brighter; that is the orange
   peak the button marks first. The preset now names it.
-- `Load its lines` names four or five real peaks correctly with the violet line
-  unmarked and the red end on the left. Three peaks stay ambiguous.
+- Naming (`Find peaks`, `Name`) names four or five real peaks correctly with
+  the violet line unmarked and the red end on the left. Three peaks stay
+  ambiguous.
 
 Still owed, with a blank in the cuvette:
 

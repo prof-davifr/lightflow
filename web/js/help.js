@@ -126,12 +126,12 @@ LF.telas.ajuda = (function () {
         <li>On the <b>Camera</b> tab, put the box over the stripe. Turn the
           angle until the peaks in the profile below are as narrow as they get,
           then raise <b>Rows binned</b> until the noise settles.</li>
-        <li>Point the slit at a fluorescent lamp. On <b>Calibration</b>, press
-          <b>Add the strongest unused peak</b> four or five times, press
-          <b>Load its lines</b>, choose order 2 with three mercury lines or
-          order 1 with two, and press <b>Fit</b>. Accept it when the header says
-          calibrated and the unticked check lines land within a couple of
-          nanometres.</li>
+        <li>Point the slit at a fluorescent lamp. <b>Calibration</b> is five
+          numbered steps, and the one to do next is outlined. Press <b>Find
+          peaks</b>, which marks the five strongest peaks and names them, then
+          <b>Fit</b>. Step 4 shows where the unticked check lines landed; accept
+          the fit when it says "checks within" a nanometre or two, then
+          <b>Save</b>.</li>
         <li>Cover the slit and press <b>Capture dark</b>. Put the blank in and
           press <b>Capture reference</b>.</li>
         <li>The absorbance curve should now sit flat near zero. That flat line
@@ -215,17 +215,19 @@ LF.telas.ajuda = (function () {
         midpoint. Picking one of the two writes a nanometre of error into the
         fit before it starts. If your instrument does show two humps there, mark
         one of them only, or type both wavelengths by hand.</p>
-      <p><b>Load its lines</b> names the marked peaks by their spacing, not by
+      <p><b>Name</b> names the marked peaks by their spacing, not by
         their order, so a faint violet line left unmarked or a red end on the
         left of the sensor still gets the right names. With only three peaks the
-        spacing can fit more than one set of lines; the footer says so, and then
-        one more peak settles it. With five or more, a peak that is no line of
+        spacing can fit more than one set of lines; the status line says so,
+        and <b>+ One more</b> peak settles it. With five or more, a peak that is no line of
         the source is left unnamed; when nothing fits, nothing is named.</p>
       <p><b>Order 2 is right nearly always.</b> The grating equation is a sine,
         and over the fan a small grating covers, its departure from a straight
         line is a quadratic to well under a tenth of a nanometre. Order 1 exists
         so a two-laser calibration is possible, and for a lamp where only two
-        mercury lines show; order 3 is for a badly tilted camera.</p>
+        mercury lines show; order 3 is for a badly tilted camera. The
+        <b>auto</b> order takes 2 when three or more fitted lines are ticked and
+        1 with two.</p>
       <p><b>Read the residuals, not just the rms.</b> One point far out means a
         peak was matched to the wrong line. Raising the order will hide that and
         give a smooth wrong answer.</p>

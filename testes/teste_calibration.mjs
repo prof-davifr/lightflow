@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ajusta, toNm, toPx, eixo, dispersao, confere, nomeia, avalia, sinal, LINHAS,
-  DUBLETO_HG } from "../web/js/nucleo/calibration.js";
+import { ajusta, toNm, toPx, eixo, dispersao, confere, nomeia, avalia, sinal, ordemAuto,
+  LINHAS, DUBLETO_HG } from "../web/js/nucleo/calibration.js";
 import { acha } from "../web/js/nucleo/peaks.js";
 import { polyval } from "../web/js/nucleo/num.js";
 
@@ -290,6 +290,23 @@ test("avalia catches a wrong name the rms cannot see", () => {
   assert.equal(av.suspeita, true);
   assert.match(av.motivos[0], /611\.6 nm/);
   assert.match(av.avisos[0], /says nothing/);
+  assert.equal(av.piorCheck.nm, 611.60);
+  assert.ok(Math.abs(av.piorCheck.residuo) > av.limite);
+  assert.ok(Math.abs(av.limite - 3 * Math.abs(dispersao(cal, NCOL))) < 1e-9);
+});
+
+test("avalia reports no worst check when there is no check line", () => {
+  const pontos = [435.83, 546.07, DUBLETO_HG].map((nm) => ({ px: colunaDe(nm), nm: nm }));
+  assert.equal(avalia(ajusta(pontos, 1), NCOL).piorCheck, null);
+});
+
+test("the automatic order follows the ticked, named lines", () => {
+  const p = (nm, usar) => ({ px: 0, nm: nm, usar: usar });
+  assert.equal(ordemAuto([p(435.83), p(546.07)]), 1);
+  assert.equal(ordemAuto([p(435.83), p(546.07), p(611.6, false)]), 1, "a check does not count");
+  assert.equal(ordemAuto([p(404.66), p(435.83), p(546.07)]), 2);
+  assert.equal(ordemAuto([p(404.66), p(435.83), p(546.07), p(DUBLETO_HG)]), 2, "never 3 by itself");
+  assert.equal(ordemAuto([p(NaN), p(546.07)]), 1);
 });
 
 test("the calibration signal is R+G+B, whatever the measurement channel", () => {

@@ -184,6 +184,80 @@ button.ajuda {
 .tira b { color: var(--tinta); font-weight: 600; }
 .tira .falta { color: var(--alerta); }
 
+/* ------------------------------------------------------ calibration steps */
+/* Numbered steps instead of a toolbar. The step to do next has a coloured
+   edge and the only primary button; a step done shows a tick. */
+.passos {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 8px; flex: none;
+  /* Each step as wide as its buttons need, so none of them wraps: the cards
+     stay one row of buttons high and the charts below keep their height. */
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.45fr) minmax(0, 1fr)
+    minmax(0, 1fr) minmax(0, .8fr);
+}
+.passos > li {
+  display: flex; gap: 8px; min-width: 0;
+  background: var(--fundo); border: 1px solid var(--grade);
+  border-radius: 6px; padding: 7px 9px;
+}
+.passos button { padding: 4px 8px; }
+.passos .num {
+  flex: none; width: 20px; height: 20px; border-radius: 10px;
+  display: grid; place-items: center; font-size: 11px; font-weight: 600;
+  background: var(--fundo2); color: var(--tinta2); border: 1px solid var(--grade);
+}
+.passos .corpo { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.passos .titulo { font-weight: 620; }
+.passos .acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+#preset { width: 0; flex: 1; min-width: 110px; }
+.passos .acoes label { font-size: 11px; color: var(--tinta2); }
+.passos .acoes select {
+  min-width: 0; max-width: 100%; padding: 4px 6px; font: inherit;
+  border: 1px solid var(--grade); border-radius: 4px;
+  background: var(--fundo); color: var(--tinta);
+}
+.passos .dica { font-size: 11px; color: var(--tinta2); line-height: 1.35; }
+/* The source's note is a paragraph; two lines of it, the rest on hover. */
+.passos .dica.corta {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.passos .resultado { font-size: 12px; font-variant-numeric: tabular-nums; }
+.passos li.atual { border-color: var(--seq3); box-shadow: inset 3px 0 0 var(--seq3); }
+.passos li.atual .num { background: var(--seq4); color: #fff; border-color: var(--seq4); }
+.passos li.feito .num { background: #e6f3f6; color: var(--bom); border-color: #bfe0e8; }
+.passos li.mau { border-color: #e6c7d7; box-shadow: inset 3px 0 0 var(--alerta); }
+.passos li.mau .num { background: #f7e9f0; color: var(--alerta); border-color: #e6c7d7; }
+.passos li.mau .resultado { color: var(--alerta); font-weight: 600; }
+.passos li.feito .resultado { color: var(--bom); font-weight: 600; }
+@media (max-width: 1100px) { .passos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.estado, .aviso { flex: none; }
+/* The steps take a row; the charts give up the same height so that the
+   residuals stay on a 900 px screen. */
+#tela-calibracao .duas.enche { min-height: 270px; }
+
+/* The result of the last action on this screen, next to where it was done. */
+.estado {
+  margin: 0; padding: 6px 10px; font-size: 12px; border-radius: 4px;
+  background: var(--fundo); border: 1px solid var(--grade);
+}
+.estado:empty { display: none; }
+.estado.ok { background: #e6f3f6; border-color: #bfe0e8; color: var(--seq4); }
+.estado.aviso { background: #fffbeb; border-color: #f3d9a4; color: var(--aviso); }
+.estado.erro { background: #f7e9f0; border-color: #e6c7d7; color: var(--alerta); }
+
+.cabeca .direita { margin-left: auto; }
+.caixa h3.sub { margin-top: 14px; }
+.etiqueta {
+  display: inline-block; font-size: 10px; padding: 0 5px; margin-left: 4px;
+  border-radius: 8px; white-space: nowrap; vertical-align: 1px;
+  background: var(--fundo2); color: var(--tinta2); border: 1px solid var(--grade);
+}
+.etiqueta.mau { background: #f7e9f0; color: var(--alerta); border-color: #e6c7d7; }
+#tab-cal td.nm input { width: 6.5em; min-width: 0; }
+#tab-cal td.papel { white-space: nowrap; }
+.tabela td.vazio { color: var(--tinta2); }
+
 .nota { font-size: 11px; color: var(--tinta2); margin: 6px 0 0; }
 .aviso { font-size: 12px; color: var(--alerta); margin: 0; min-height: 0; }
 .aviso:empty { display: none; }

@@ -103,7 +103,7 @@ const MESMA_COL = 1;
 
    Naming the k-th peak from the left as the k-th line breaks in the two ways a
    real bench produces: a weak line is not marked (the violet mercury line is
-   faint on a webcam, and "strongest unused peak" picks the europium band before
+   faint on a webcam, and "Find peaks" picks the europium band before
    it), and the red end sits on the LEFT of the sensor. Either way every name
    shifts, and the fit is fitted to the wrong lines.
 
@@ -285,8 +285,10 @@ export function dispersao(cal, n) {
    18 nm from where it belongs. The checks are the test the rms cannot be: a
    check line more than LIMITE_COL columns off makes the fit suspect too.
 
-   Returns {suspeita, motivos, avisos}: `motivos` say why it is suspect,
-   `avisos` are things the operator should know that do not make it so. */
+   Returns {suspeita, motivos, avisos, limite, piorCheck}: `motivos` say why
+   it is suspect, `avisos` are things the operator should know that do not make
+   it so, `limite` is the allowed miss in nanometres, and `piorCheck` is the
+   check line that lands furthest off, {nm, residuo}, or null without checks. */
 export function avalia(cal, nCol) {
   const d = Math.abs(dispersao(cal, nCol));
   const lim = LIMITE_COL * d;
@@ -295,11 +297,14 @@ export function avalia(cal, nCol) {
     motivos.push("the residuals are several columns wide, which normally means "
       + "one peak was matched to the wrong line, not that the order is too low");
   }
-  let checks = 0;
+  let checks = 0, piorCheck = null;
   (cal.pontos || []).forEach(function (p, k) {
     if (p.usar !== false || !isFinite(p.nm)) return;
     checks++;
     const r = cal.residuos[k];
+    if (isFinite(r) && (!piorCheck || Math.abs(r) > Math.abs(piorCheck.residuo))) {
+      piorCheck = { nm: p.nm, residuo: r };
+    }
     if (isFinite(r) && Math.abs(r) > lim) {
       motivos.push("the check line at " + p.nm + " nm lands " + Math.abs(r).toFixed(1)
         + " nm away from it");
@@ -310,7 +315,18 @@ export function avalia(cal, nCol) {
       + "every one of them, so its rms says nothing"
       + (checks ? "; the check lines are the test" : "; mark another line"));
   }
-  return { suspeita: motivos.length > 0, motivos: motivos, avisos: avisos };
+  return {
+    suspeita: motivos.length > 0, motivos: motivos, avisos: avisos,
+    limite: lim, piorCheck: piorCheck,
+  };
+}
+
+/* The order to fit when the operator leaves it to the program: 2 when three or
+   more named lines are ticked, 1 with two. A lamp often shows only two mercury
+   lines, and order 2 then refused to fit at all. */
+export function ordemAuto(pontos) {
+  const n = pontos.filter(function (p) { return p.usar !== false && isFinite(p.nm); }).length;
+  return Math.max(1, Math.min(2, n - 1));
 }
 
 /* A calibration belongs to one mechanical setup and one ROI. Comparing the

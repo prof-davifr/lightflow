@@ -16,6 +16,9 @@ import * as peaks from "./peaks.js";
 import * as locks from "./locks.js";
 import * as storage from "./storage.js";
 import * as exportfile from "./exportfile.js";
+import * as exposicao from "./exposicao.js";
+import * as resposta from "./resposta.js";
+import * as cor from "./cor.js";
 
 window.LF.nucleo = {
   num: num,
@@ -26,6 +29,9 @@ window.LF.nucleo = {
   locks: locks,
   storage: storage,
   exportfile: exportfile,
+  exposicao: exposicao,
+  resposta: resposta,
+  cor: cor,
 };
 
 window.LF.inicia();

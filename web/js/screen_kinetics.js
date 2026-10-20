@@ -189,7 +189,7 @@ LF.telas.cinetica = (function () {
         s[k] = LF.nucleo.peaks.media(xs, corrida.valores[k], b.centro, b.largura);
       }
       b.y = s;
-      dados.push(s);
+      dados.push(LF.serieY(s));
     });
     plot.setData(dados);
     plot.axes[1].label = LF.telas.espectro.unidade();

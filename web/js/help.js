@@ -26,10 +26,10 @@ LF.telas.ajuda = (function () {
     },
     channel: {
       rot: "Channel",
-      txt: "Which of the camera's colour channels carries the measurement. "
-        + "Green is the default because it is the only one delivered at full "
-        + "resolution along the spectral axis. Red and blue are useful as "
-        + "cross-checks and at the ends where green runs out.",
+      txt: "The camera's colour channel that carries the measurement. It is "
+        + "always green, because green is the only one delivered at full "
+        + "resolution along the spectral axis. Red and blue can still be drawn "
+        + "on the Spectrum tab as cross-checks.",
     },
     mode: {
       rot: "Mode",
@@ -43,6 +43,39 @@ LF.telas.ajuda = (function () {
       txt: "How many camera frames go into one spectrum. The noise falls as the "
         + "square root of this number, and so does the number of spectra per "
         + "second. Sixteen is a good starting point at 30 frames a second.",
+    },
+    filter: {
+      rot: "Live filter",
+      txt: "How the live spectrum is built from the frames. Block mean: the mean "
+        + "of N frames, then a new one. Running mean: a new spectrum on every "
+        + "frame that settles in about N frames, smoother to watch. Peak hold: "
+        + "each column keeps the highest value it reached until Restart, so a "
+        + "flash or a spark stays on the screen; it is no use for absorbance. "
+        + "A captured dark or reference is always a block mean.",
+    },
+    autoexp: {
+      rot: "Find exposure",
+      txt: "Searches the exposure once, with the camera on manual: it sets an "
+        + "exposure, reads the brightest raw pixel in the strip and scales until "
+        + "that pixel reads about 200 of 255, then locks there. Nothing moves "
+        + "after that. Run it with the lamp you will measure with, before the "
+        + "dark and the reference.",
+    },
+    response: {
+      rot: "Response correction",
+      txt: "The camera, the grating and the lenses pass some wavelengths better "
+        + "than others, so an emission spectrum comes out multiplied by that "
+        + "curve. Loading a coefficient file, or computing one from a halogen "
+        + "lamp of known colour temperature, takes it out: emission and "
+        + "fluorescence then read as relative irradiance. Absorbance does not "
+        + "need it, because the curve cancels in S / R.",
+    },
+    logscale: {
+      rot: "Log scale",
+      txt: "Spreads the low values so a weak line next to a strong one is "
+        + "visible. It is an asinh scale: logarithmic away from zero and linear "
+        + "near it, so a baseline at zero and small negative values still "
+        + "draw. Only the screen changes, never a file.",
     },
     linearization: {
       rot: "Linearization",
@@ -121,8 +154,11 @@ LF.telas.ajuda = (function () {
         <li>Press <b>Lock camera</b>. The pill in the header must turn green.
           If it stays red, read <a href="#" data-ir="troubleshooting">Troubleshooting</a>
           before going on.</li>
-        <li>Set the exposure so the brightest part of the stripe sits high but
-          nothing is marked as clipped.</li>
+        <li>Put the lamp you will measure with in front of the slit and press
+          <b>Find exposure</b>. It sets the brightest pixel near 200 of 255
+          and locks the camera there. To set it by hand instead, move the
+          exposure until the stripe sits high but nothing is marked as
+          clipped.</li>
         <li>On the <b>Camera</b> tab, put the box over the stripe. Turn the
           angle until the peaks in the profile below are as narrow as they get,
           then raise <b>Rows binned</b> until the noise settles.</li>
@@ -132,8 +168,11 @@ LF.telas.ajuda = (function () {
           <b>Fit</b>. Step 4 shows where the unticked check lines landed; accept
           the fit when it says "checks within" a nanometre or two, then
           <b>Save</b>.</li>
-        <li>Cover the slit and press <b>Capture dark</b>. Put the blank in and
-          press <b>Capture reference</b>.</li>
+        <li>Change to a continuous lamp: a white LED or a halogen bulb. Cover
+          the slit and press <b>Capture dark</b>. Put the blank in and press
+          <b>Capture reference</b>. Both are only valid for the exposure, white
+          balance and region they were taken with; the strip under the buttons
+          says when that is no longer true, and when the reference is old.</li>
         <li>The absorbance curve should now sit flat near zero. That flat line
           is the real proof that the whole chain works.</li>
         <li>Put the sample in. To follow a reaction, go to <b>Kinetics</b> and
@@ -148,7 +187,12 @@ LF.telas.ajuda = (function () {
       <p>Needs a dark frame and a reference. This is the mode for reaction
         kinetics and for Beer's law. A column comes back empty rather than
         infinite where no light gets through, because a gap is honest and a
-        vertical spike looks like a real, enormous peak.</p>
+        vertical spike looks like a real, enormous peak. It also comes back
+        empty where the reference itself is not above three times the dark
+        noise: at the ends of a lamp the ratio there is noise divided by noise,
+        and it reads as absorbance that was never measured.</p>
+      <p>The reference has to come from a continuous lamp. A fluorescent tube
+        lights only its lines, and between them every column is empty.</p>
 
       <h4>Transmittance — %</h4>
       <div class="formula">T = 100 × (S − D) / (R − D)</div>
@@ -159,7 +203,10 @@ LF.telas.ajuda = (function () {
       <div class="formula">E = S − D</div>
       <p>The spectrum of a source in its own right: a lamp, an LED, a flame. No
         reference is involved, so the shape carries the camera's own spectral
-        response as well as the source's.</p>
+        response as well as the source's. <b>Response</b> in the side panel
+        takes that out, from a coefficient file or from a halogen lamp of known
+        colour temperature, and the axis then reads relative irradiance. For a
+        flash or a spark, set <b>Live filter</b> to peak hold.</p>
 
       <h4>Fluorescence — linear, arbitrary units</h4>
       <div class="formula">F = S − B</div>

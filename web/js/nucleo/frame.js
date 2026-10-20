@@ -89,6 +89,8 @@ export function assinatura(roi, larg, alt) {
      clip      per column, how many raw samples reached LIMIAR_SATUR
      used      per column, how many rows actually fell inside the image
      clipTotal the sum of clip, for the header pill
+     pico      the highest raw code value read, any channel, for the
+               automatic exposure
 
    A column with no usable row comes back NaN, and uPlot draws a gap there. */
 export function extract(img, roi, lut, limiar) {
@@ -107,7 +109,7 @@ export function extract(img, roi, lut, limiar) {
      is read from image column x+i+0.5 — a permanent half-column shift in every
      wavelength the instrument reports. */
   const cx = roi.x + (roi.w - 1) / 2, cy = roi.y + (roi.h - 1) / 2;
-  let clipTotal = 0;
+  let clipTotal = 0, pico = 0;
 
   for (let i = 0; i < w; i++) {
     const u = i - (w - 1) / 2;
@@ -131,6 +133,9 @@ export function extract(img, roi, lut, limiar) {
         || D[o10] >= lim || D[o10 + 1] >= lim || D[o10 + 2] >= lim
         || D[o01] >= lim || D[o01 + 1] >= lim || D[o01 + 2] >= lim
         || D[o11] >= lim || D[o11 + 1] >= lim || D[o11 + 2] >= lim) nc++;
+      if (D[o00] > pico) pico = D[o00];
+      if (D[o00 + 1] > pico) pico = D[o00 + 1];
+      if (D[o00 + 2] > pico) pico = D[o00 + 2];
 
       const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy);
       const w01 = (1 - fx) * fy, w11 = fx * fy;
@@ -147,7 +152,8 @@ export function extract(img, roi, lut, limiar) {
     }
     clip[i] = nc; used[i] = n; clipTotal += nc;
   }
-  return { r: r, g: g, b: b, lum: lum, clip: clip, used: used, clipTotal: clipTotal };
+  return { r: r, g: g, b: b, lum: lum, clip: clip, used: used, clipTotal: clipTotal,
+    pico: pico };
 }
 
 export const CANAIS = ["r", "g", "b", "lum"];
@@ -306,5 +312,83 @@ export class Acumulador {
     }
     this.clip.fill(0);
     this.n = 0; this.clipTotal = 0;
+  }
+}
+
+/* ----------------------------------------------------- the live spectrum
+
+   What the live spectrum is made of, one of three:
+
+   "bloco"  the mean of N frames, then start again. A new spectrum every N
+            frames, each one independent of the last. The default, and the
+            only one a capture of the dark or the reference ever uses.
+   "exp"    a running exponential mean with weight 1/N: a new spectrum on every
+            frame, which settles to within 1/e of a step in N frames, to 5 % in
+            3N. Smoother to watch than a block mean of the same N, and it never
+            jumps, but successive spectra are not independent.
+   "pico"   the highest value each column has reached since the last reset. A
+            flash or a spark that lasts one frame stays on the screen. It is an
+            envelope, not a measurement: noise only ever pushes it up, so it is
+            no use for absorbance.
+
+   Each returns frames in the shape Acumulador.media() gives, without sigma:
+   only a captured dark needs the spread, and a capture uses Acumulador. */
+export const FILTROS = ["bloco", "exp", "pico"];
+
+export class Filtro {
+  constructor(w, modo, n) {
+    if (FILTROS.indexOf(modo) < 0) throw new Error("unknown filter: " + modo);
+    this.w = w; this.modo = modo; this.N = Math.max(1, n | 0);
+    this.bloco = new Acumulador(w);
+    this.estado = {};
+    for (let c = 0; c < CANAIS.length; c++) this.estado[CANAIS[c]] = new Float64Array(w);
+    this.clip = new Uint32Array(w);
+    this.ultimoClip = new Float64Array(w);
+    this.n = 0;
+  }
+
+  /* One extracted line in; a frame out, or null while a block is filling. */
+  poe(linha) {
+    if (this.modo === "bloco") {
+      this.bloco.poe(linha);
+      if (!this.bloco.pronto(this.N)) return null;
+      const m = this.bloco.media();
+      this.bloco.limpa();
+      return m;
+    }
+    this.n++;
+    const a = this.modo === "exp" ? 1 / Math.min(this.n, this.N) : 0;
+    for (let c = 0; c < CANAIS.length; c++) {
+      const k = CANAIS[c], v = linha[k], e = this.estado[k];
+      for (let i = 0; i < this.w; i++) {
+        if (this.n === 1) e[i] = v[i];
+        else if (this.modo === "exp") e[i] += a * (v[i] - e[i]);
+        else if (v[i] > e[i] || isNaN(e[i])) e[i] = v[i];
+      }
+    }
+    /* A clipped frame spoils a running mean for about 3N frames, and an
+       envelope for good, so the clip flag is held for that long. */
+    let clipTotal = 0;
+    for (let i = 0; i < this.w; i++) {
+      if (linha.clip[i] > 0) this.ultimoClip[i] = this.n;
+      const vivo = this.ultimoClip[i] > 0
+        && (this.modo === "pico" || this.n - this.ultimoClip[i] < 3 * this.N);
+      this.clip[i] = vivo ? 1 : 0;
+      clipTotal += this.clip[i];
+    }
+    const saida = {
+      n_quadros: this.modo === "exp" ? Math.min(this.n, this.N) : this.n,
+      clip: this.clip.slice(), clipTotal: clipTotal, sigma: {}, filtro: this.modo,
+    };
+    for (let c = 0; c < CANAIS.length; c++) {
+      saida[CANAIS[c]] = Float32Array.from(this.estado[CANAIS[c]]);
+    }
+    return saida;
+  }
+
+  limpa() {
+    this.bloco.limpa();
+    this.clip.fill(0); this.ultimoClip.fill(0);
+    this.n = 0;
   }
 }

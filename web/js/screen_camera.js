@@ -175,7 +175,7 @@ LF.telas.camera = (function () {
     const n = ultima.r.length;
     const xs = new Array(n);
     for (let i = 0; i < n; i++) xs[i] = i;
-    plot.setData([xs, Array.from(ultima.r), Array.from(ultima.g), Array.from(ultima.b)]);
+    plot.setData([xs, LF.serieY(ultima.r), LF.serieY(ultima.g), LF.serieY(ultima.b)]);
     LF.ajusta(plot, LF.q("#g-cru"));
   }
 

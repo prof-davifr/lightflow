@@ -38,7 +38,10 @@ Two constraints are worth knowing before you start.
 
 1. Choose the spectrometer under **Device** and press **Open**.
 2. Press **Lock camera**. The pill in the header must turn green.
-3. Set the exposure so the stripe is bright but nothing is flagged as clipped.
+3. Put the lamp you will measure with in front of the slit and press **Find
+   exposure**. It searches once, sets the brightest pixel near 200 of 255, and
+   leaves the camera locked there. Or set the exposure by hand so the stripe is
+   bright but nothing is flagged as clipped.
 4. On the **Camera** tab, put the box over the stripe. Turn the angle until the
    peaks in the profile below are as narrow as they get, then raise **Rows
    binned** until the noise settles.
@@ -47,8 +50,11 @@ Two constraints are worth knowing before you start.
    marks the five strongest peaks and names them, then **Fit**. Step 4 shows
    where the unticked phosphor check lines landed; accept the fit when it says
    "checks within" a nanometre or two, then **Save**.
-6. Cover the slit and press **Capture dark**. Put the blank in and press
-   **Capture reference**.
+6. Change to a continuous lamp — a white LED or a halogen bulb; a fluorescent
+   lamp lights only its lines. Cover the slit and press **Capture dark**. Put
+   the blank in and press **Capture reference**. The strip under the buttons
+   shows how old each one is, and says when one was taken at another exposure,
+   white balance or region and has to be taken again.
 7. The absorbance curve should now sit flat near zero. **That flat line is the
    real proof that the whole chain works.**
 8. Put the sample in. To follow a reaction, go to **Kinetics** and press
@@ -89,6 +95,29 @@ Fluorescence **subtracts** the blank rather than dividing by it: the blank
 carries the scattered excitation and the solvent's own emission, and both are
 additive.
 
+Absorbance and transmittance are left empty wherever the reference is not above
+three times the dark noise. At the ends of a lamp the ratio there is noise
+divided by noise, and it would read as absorbance that was never measured.
+
+Emission and fluorescence carry the instrument's own spectral response. The
+**Response** panel takes it out, from a coefficient file (`nm,coefficient`, one
+pair a line) or from a halogen lamp of known colour temperature, and the axis
+then reads relative irradiance. Like every other correction it is applied on
+read: what is stored stays raw.
+
+## On the screen
+
+- **Live filter.** *Block mean* averages N frames and starts again. *Running
+  mean* gives a new spectrum on every frame and settles in about N frames.
+  *Peak hold* keeps each column's highest value until **Restart**, so a flash
+  or a spark stays visible; it is not a measurement. A captured dark or
+  reference is always a block mean.
+- **Colours** fills the curve with the colour of each wavelength, **Peak
+  labels** writes the wavelength over each peak, and **Scale: log** spreads
+  the low values. None of them changes a file.
+- **PNG** saves the chart with the mode, the date and the calibration written
+  above it.
+
 ## What it cannot do
 
 The browser hands over 8 bits per channel, with no raw Bayer data and no 10-bit
@@ -99,8 +128,8 @@ tab; that is the number to trust.
 
 Red and blue arrive at half resolution along the spectral axis, because both
 MJPG and YUYV subsample chroma horizontally and horizontal is the dispersion
-direction. **Green is the measurement channel.** Red and blue are for
-cross-checks and for the ends where green runs out.
+direction. **Green is the measurement channel**, always: there is no setting to
+change it. Red and blue can still be drawn on the Spectrum tab as cross-checks.
 
 Some camera controls — sharpening, the hardware gamma, backlight compensation —
 are applied before the browser sees anything and no browser API reaches them. On

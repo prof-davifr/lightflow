@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   absorbance, transmittance, emission, fluorescence, calcula, aMax,
+  confereEscuro, confereReferencia,
 } from "../web/js/nucleo/photometry.js";
 
 /* A minimal frame in the shape that frame.js Acumulador.media() produces. */
@@ -35,8 +36,9 @@ test("absorbance is zero when the sample equals the reference", () => {
 });
 
 test("absorbance gives NaN, never Infinity, on a dead sample", () => {
-  /* uPlot draws NaN as a gap and Infinity as a full-height vertical stroke that
-     reads as an enormous real peak. */
+  /* NaN becomes a gap on the screen and an empty field in a file. Infinity
+     would be drawn as a full-height vertical stroke that reads as an enormous
+     real peak. */
   const A = absorbance(quadro("g", [0.05]), quadro("g", [0.05]), quadro("g", [0.9]), "g");
   assert.ok(Number.isNaN(A[0]), `got ${A[0]}`);
   assert.ok(!Number.isFinite(A[0]) && !(A[0] === Infinity));
@@ -120,4 +122,78 @@ test("aMax reports the honest ceiling from the dark noise", () => {
 
 test("aMax is NaN without a measured dark spread", () => {
   assert.ok(Number.isNaN(aMax(quadro("g", [0]), quadro("g", [1]), "g")));
+});
+
+/* What the bench did: dark and reference both taken on the calibration lamp. */
+test("a dark taken with the lamp on is reported", () => {
+  const D = quadro("g", [0.002, 0.40, 0.003]);
+  assert.match(confereEscuro(D, "g"), /not dark: it reaches 40 %/);
+});
+
+test("a dark that clips is reported even when its mean is low", () => {
+  const D = quadro("g", [0.001, 0.002, 0.001], { clip: Uint16Array.from([0, 3, 0]) });
+  assert.match(confereEscuro(D, "g"), /clips in 1 columns/);
+});
+
+test("a covered slit passes the dark check", () => {
+  assert.equal(confereEscuro(quadro("g", [0, 0.001, 0.004]), "g"), null);
+});
+
+test("a reference on a line lamp is reported with its count of usable columns", () => {
+  /* Two lit columns out of eight, like the lines of a fluorescent tube. */
+  const D = quadro("g", new Array(8).fill(0.001), { sigma: new Array(8).fill(0.0005) });
+  const R = quadro("g", [0.001, 0.6, 0.001, 0.001, 0.001, 0.3, 0.001, 0.001]);
+  const r = confereReferencia(R, D, "g");
+  assert.equal(r.uteis, 2);
+  assert.match(r.aviso, /only 2 of 8 columns/);
+});
+
+test("a dark equal to the reference leaves no usable column", () => {
+  const v = [0.2, 0.6, 0.4, 0.3];
+  const r = confereReferencia(quadro("g", v), quadro("g", v, { sigma: [0, 0, 0, 0] }), "g");
+  assert.equal(r.uteis, 0);
+  assert.ok(r.aviso);
+});
+
+test("a continuous reference over a covered dark passes", () => {
+  const D = quadro("g", [0, 0, 0, 0], { sigma: [0, 0, 0, 0] });
+  const R = quadro("g", [0.1, 0.5, 0.7, 0.2]);
+  const r = confereReferencia(R, D, "g");
+  assert.equal(r.uteis, 4);
+  assert.equal(r.aviso, null);
+});
+
+test("a noiseless dark still needs the reference above the noise floor", () => {
+  /* A covered sensor often reads 0 on every frame, so 3 sigma is 0 and any
+     stray code value would count as light without the floor. */
+  const D = quadro("g", [0, 0, 0], { sigma: [0, 0, 0] });
+  const r = confereReferencia(quadro("g", [0.0005, 0.0005, 0.5]), D, "g");
+  assert.equal(r.uteis, 1);
+});
+
+test("absorbance is empty where the reference is lost in the dark noise", () => {
+  /* Column 1: R - D = 0.004, under 3 sigma = 0.006. The ratio would be a number,
+     and a large one, but it is noise divided by noise. */
+  const D = quadro("g", [0.01, 0.01], { sigma: [0.002, 0.002] });
+  const R = quadro("g", [0.51, 0.014]);
+  const S = quadro("g", [0.26, 0.011]);
+  const A = absorbance(S, D, R, "g");
+  assert.ok(Math.abs(A[0] - Math.log10(2)) < 1e-6, `got ${A[0]}`);
+  assert.ok(Number.isNaN(A[1]));
+  assert.ok(Number.isNaN(transmittance(S, D, R, "g")[1]));
+});
+
+test("a noiseless dark still masks a reference under the noise floor", () => {
+  const D = quadro("g", [0, 0], { sigma: [0, 0] });
+  const R = quadro("g", [0.5, 0.001]);
+  const A = absorbance(quadro("g", [0.5, 0.001]), D, R, "g");
+  assert.ok(Math.abs(A[0]) < 1e-6);
+  assert.ok(Number.isNaN(A[1]));
+});
+
+test("aMax of a noiseless dark uses the noise floor, not an infinite ceiling", () => {
+  /* A covered sensor reading 0 on every frame: sigma 0. log10(0.5 / 0.002). */
+  const D = quadro("g", [0, 0], { sigma: [0, 0] });
+  const a = aMax(D, quadro("g", [0.5, 0.5]), "g");
+  assert.ok(Math.abs(a - Math.log10(250)) < 1e-6, `got ${a}`);
 });

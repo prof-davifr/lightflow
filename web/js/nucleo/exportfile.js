@@ -38,6 +38,7 @@ export function csvEspectro(xs, ys, meta) {
   const partes = [cabecalho({
     mode: meta.y, channel: meta.canal, unit: meta.unidade,
     calibrated: meta.calibrado === undefined ? undefined : !!meta.calibrado,
+    response_correction: meta.resposta,
     columns: xs.length,
   })];
   partes.push(colX + "," + colY + NL);
@@ -57,6 +58,7 @@ export function csvCorrida(tempos, xs, linhas, meta) {
   const partes = [cabecalho({
     mode: meta.modo, channel: meta.canal, unit: meta.unidade,
     calibrated: meta.calibrado === undefined ? undefined : !!meta.calibrado,
+    response_correction: meta.resposta,
     spectra: linhas.length, columns: xs.length,
     started: meta.inicio ? new Date(meta.inicio).toISOString() : undefined,
   })];

@@ -183,6 +183,11 @@ button.ajuda {
 }
 .tira b { color: var(--tinta); font-weight: 600; }
 .tira .falta { color: var(--alerta); }
+/* One line, always: the chart under it takes its height from what is left, and
+   a strip that wrapped when a warning appeared would resize the chart. The
+   full text of a warning is in its title. */
+#estado-quadros { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; min-height: 16px; }
+#estado-quadros > * { overflow: hidden; text-overflow: ellipsis; }
 
 /* ------------------------------------------------------ calibration steps */
 /* Numbered steps instead of a toolbar. The step to do next has a coloured

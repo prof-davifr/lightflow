@@ -31,8 +31,8 @@
 <header id="barra">
   <nav id="abas">
     <button data-tela="camera" class="ativa">Camera</button>
-    <button data-tela="espectro">Spectrum</button>
     <button data-tela="calibracao">Calibration</button>
+    <button data-tela="espectro">Spectrum</button>
     <button data-tela="cinetica">Kinetics</button>
     <button data-tela="dados">Data</button>
     <button data-tela="ajuda">Help</button>
@@ -81,6 +81,9 @@
       <span id="temp-cor-val" class="val">4600</span>
     </div>
     <div class="linha-bt">
+      <button id="bt-auto-exp" data-termo="autoexp">Find exposure</button>
+    </div>
+    <div class="linha-bt">
       <button id="bt-travar" class="primario">Lock camera</button>
       <button id="bt-soltar" title="Give exposure, white balance and focus back to the camera. The camera keeps a lock after LightFlow closes.">Release</button>
     </div>
@@ -88,15 +91,6 @@
   </fieldset>
 
   <h2>Measurement</h2>
-  <div class="campo">
-    <label for="canal" data-termo="channel">Channel</label>
-    <select id="canal">
-      <option value="g" selected>green — full resolution</option>
-      <option value="r">red — half resolution</option>
-      <option value="b">blue — half resolution</option>
-      <option value="lum">luminance mix</option>
-    </select>
-  </div>
   <div class="campo">
     <label for="modo" data-termo="mode">Mode</label>
     <select id="modo">
@@ -114,6 +108,16 @@
     </select>
   </div>
   <div class="campo">
+    <label for="filtro" data-termo="filter">Live filter</label>
+    <select id="filtro">
+      <option value="bloco" selected>block mean</option>
+      <option value="exp">running mean</option>
+      <option value="pico">peak hold</option>
+    </select>
+    <span id="filtro-val" class="val">—</span>
+    <div class="linha-bt"><button id="bt-filtro-zera">Restart</button></div>
+  </div>
+  <div class="campo">
     <label for="gama" data-termo="linearization">Linearization</label>
     <select id="gama">
       <option value="srgb" selected>inverse sRGB</option>
@@ -121,6 +125,25 @@
       <option value="2.2">gamma 2.2</option>
       <option value="1.8">gamma 1.8</option>
     </select>
+  </div>
+
+  <h2>Response</h2>
+  <div class="campo">
+    <label for="resposta" data-termo="response">Correct emission for the instrument</label>
+    <select id="resposta">
+      <option value="off" selected>off</option>
+      <option value="on">on</option>
+    </select>
+    <span id="resposta-val" class="val">no curve loaded</span>
+    <div class="linha-bt">
+      <button id="bt-resposta-abre" title="A text file with one wavelength in nm and one coefficient per line">Load…</button>
+      <button id="bt-resposta-lampada" title="Compute the curve from a halogen lamp in front of the slit, with a dark and a calibration">From lamp…</button>
+    </div>
+    <div class="linha-bt">
+      <button id="bt-resposta-exporta">Export</button>
+      <button id="bt-resposta-tira">Remove</button>
+    </div>
+    <input id="arq-resposta" type="file" accept=".csv,.txt,text/plain,text/csv" hidden>
   </div>
 </aside>
 
@@ -184,6 +207,11 @@
     <button id="bt-referencia" data-termo="reference">Capture reference</button>
     <button id="bt-branco" data-termo="blank">Capture blank</button>
     <span class="sep"></span>
+    <button id="bt-salvar-espectro">Save spectrum</button>
+    <button id="bt-csv-espectro">CSV</button>
+    <button id="bt-png-espectro" title="The chart as an image, with the mode and the date on it">PNG</button>
+  </div>
+  <div class="barra-acao">
     <label class="caixinha"><input type="checkbox" id="ver-r"> R</label>
     <label class="caixinha"><input type="checkbox" id="ver-g" checked> G</label>
     <label class="caixinha"><input type="checkbox" id="ver-b"> B</label>
@@ -195,8 +223,10 @@
     <input id="esc-y-max" type="number" step="0.01" class="curto" disabled>
     <button id="bt-esc-y">Freeze</button>
     <span class="sep"></span>
-    <button id="bt-salvar-espectro">Save spectrum</button>
-    <button id="bt-csv-espectro">CSV</button>
+    <label class="caixinha" title="Colour under the curve by wavelength. Needs a calibration."><input type="checkbox" id="ver-cores"> Colours</label>
+    <label class="caixinha" title="Write the wavelength above each peak in the table"><input type="checkbox" id="ver-rotulos"> Peak labels</label>
+    <label for="esc-log" data-termo="logscale">Scale</label>
+    <select id="esc-log"><option value="lin" selected>linear</option><option value="log">log</option></select>
   </div>
   <div id="estado-quadros" class="tira"></div>
   <div class="caixa cresce">
@@ -402,6 +432,7 @@
 <script src="js/screen_kinetics.js"></script>
 <script src="js/screen_data.js"></script>
 <script src="js/help.js"></script>
+<script src="js/painel_resposta.js"></script>
 <script src="js/app.js"></script>
 <!-- A module script is deferred and a classic one is not, so this runs last of
      all. It hands the pure core to LF and only then starts the screens; nothing

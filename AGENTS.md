@@ -24,12 +24,25 @@ Read `README.md` first. This file records only what bites.
 - The legend is **not** inside the height `setSize` asks for. `LF.ajusta`
   subtracts it; resizing a plot by hand will overflow the box.
 - `LF.ajusta` runs on every frame, so the box it measures must get its height
-  from the screen, never from its content. Content-sized, the chart loses 16 px
+  from the screen, never from its content. The status strip under the Spectrum
+  buttons is one line, `nowrap`, for the same reason: a warning that wrapped
+  would resize the chart. Content-sized, the chart loses 16 px
   per frame (Calibration had an `auto` grid row). A neighbour whose height
   changes with the data resizes the chart too: the peak table under Spectrum
   did, and a frozen y axis still bounced. It now keeps eight rows, blank or not.
-- Emit `NaN`, never `Infinity`. uPlot draws `NaN` as a gap and `Infinity` as a
-  full-height vertical stroke that reads as an enormous real peak.
+- Emit `NaN`, never `Infinity`, from `nucleo/` — and turn both into `null`
+  before `setData`, through `LF.serieY`. **The vendored uPlot leaves a gap only
+  at `null`.** A `NaN` is skipped as a point and the line is drawn straight
+  across it, so a masked or clipped column reads as an interpolated
+  measurement. (This file used to say the opposite; a test on the page showed
+  otherwise.)
+- **The wavelength axis can fall.** On this bench the calibration gives 617 nm
+  at column 66 and 539 nm at column 148. uPlot finds the cursor by bisection
+  and assumes x rises, so the Spectrum chart reverses every series when the
+  axis falls. Anything drawn by hand on a chart measures both edges by value
+  and takes `min` and `abs`: the clip shading was 1 px wide on this bench.
+- An asinh y axis (`distr: 4`) needs its own `splits`: the ones uPlot makes
+  stack the labels on top of each other once the range crosses zero.
 
 ## The pipeline, in the one order that is correct
 
@@ -148,6 +161,27 @@ again**, and the program clears the dark and the reference when it changes.
 - `JSON.stringify` turns `NaN` into `null` by itself and `JSON.parse` would
   refuse a bare `NaN`, so the round trip is safe as long as nothing writes one
   by hand.
+
+## Measurement guards
+
+- Absorbance and transmittance are `NaN` where `R - D` is not above
+  `max(3σ_D, PISO_RUIDO)`. `aMax` and `confereReferencia` use the same test, so
+  the ceiling, the warning and the mask agree on which columns exist.
+  `PISO_RUIDO` is there because a covered sensor often reads 0 on every frame,
+  and 3σ is then 0.
+- Every captured dark, reference and blank carries `config` (exposure, white
+  balance, linearization, ROI signature). The strip compares it with the
+  current settings; it does not refuse to compute, it says so.
+- A capture always uses `Acumulador`, never the live `Filtro`. A running mean
+  remembers frames from before the slit was covered, and a peak hold is not a
+  measurement.
+- `exposicao.proximo` reads the **raw** peak (`extract` returns `pico`), for the
+  same reason saturation is counted on raw codes.
+- The response correction (`nucleo/resposta.js`) multiplies emission and
+  fluorescence on the measurement channel only, on read. It is NaN outside the
+  curve rather than extrapolated, and `deLampada` refuses a lamp that lights a
+  third of the columns or less: a curve from a line lamp is that lamp's
+  spectrum, inverted.
 
 ## Storage
 

@@ -1,5 +1,5 @@
 "use strict";
-/* Tab 3 — turning columns into nanometres.
+/* Tab 2 — turning columns into nanometres.
 
    The screen is five numbered steps: mark the peaks, name them, fit, check,
    save. The step to do next is marked and holds the only primary button, so
@@ -211,7 +211,7 @@ LF.telas.calibracao = (function () {
     const n = ultimoY.length;
     const xs = new Array(n);
     for (let i = 0; i < n; i++) xs[i] = i;
-    plot.setData([xs, Array.from(ultimoY)]);
+    plot.setData([xs, LF.serieY(ultimoY)]);
     LF.ajusta(plot, LF.q("#g-cal"));
   }
 

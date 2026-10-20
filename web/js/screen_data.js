@@ -86,19 +86,27 @@ LF.telas.dados = (function () {
     const exige = LF.nucleo.photometry.EXIGE[modo] || [];
     const falta = exige.filter(function (k) { return !quadros[k]; });
 
+    /* The response correction is applied on read, like everything else, with
+       the curve loaded now and on this run's own wavelength axis. */
+    const eixoNm = s.cal && s.cal.coef && amostras.length && amostras[0][canal]
+      ? eixoDe(s, amostras[0][canal].length) : null;
     const tempos = [], valores = [];
+    let corrigida = false;
     amostras.forEach(function (r) {
       if (!r[canal]) return;                 // that channel was not stored
       tempos.push(r.t);
       if (falta.length) { valores.push(r[canal]); return; }
       try {
-        valores.push(LF.nucleo.photometry.calcula(modo,
-          Object.assign({ amostra: r }, quadros), canal));
+        const c = LF.resposta.corrige(LF.nucleo.photometry.calcula(modo,
+          Object.assign({ amostra: r }, quadros), canal), modo, eixoNm);
+        corrigida = corrigida || c.aplicada;
+        valores.push(c.y);
       } catch (e) {
         valores.push(r[canal]);
       }
     });
-    return { tempos: tempos, valores: valores, falta: falta, canal: canal, modo: modo, s: s };
+    return { tempos: tempos, valores: valores, falta: falta, canal: canal, modo: modo, s: s,
+      resposta: corrigida ? LF.estado.resposta.nome : undefined };
   }
 
   function eixoDe(s, n) {
@@ -118,13 +126,15 @@ LF.telas.dados = (function () {
       return;
     }
     if (r.falta.length) {
-      LF.mensagem("exported as raw intensity: this run has no " + r.falta.join(" or "), true);
+      LF.mensagem("exported as raw intensity: this run has no "
+        + r.falta.map(function (k) { return LF.ROT_QUADRO[k]; }).join(" or "), true);
     }
     const xs = eixoDe(s, r.valores[0].length);
     const texto = LF.nucleo.exportfile.csvCorrida(r.tempos, xs, r.valores, {
       modo: r.falta.length ? "raw_linear" : r.modo, canal: r.canal,
-      unidade: r.falta.length ? "linear, a.u." : LF.nucleo.photometry.UNIDADE[r.modo],
-      calibrado: !!(s.cal && s.cal.coef), inicio: s.criada,
+      unidade: r.falta.length ? "linear, a.u."
+        : r.resposta ? "relative irradiance (response corrected)" : LF.nucleo.photometry.UNIDADE[r.modo],
+      calibrado: !!(s.cal && s.cal.coef), inicio: s.criada, resposta: r.resposta,
     });
     LF.baixa(nomeArquivo(s, "csv"), texto, "text/csv");
     LF.mensagem("exported " + r.tempos.length + " spectra");
@@ -135,7 +145,7 @@ LF.telas.dados = (function () {
     const xs = r.valores.length ? eixoDe(s, r.valores[0].length) : [];
     LF.baixa(nomeArquivo(s, "json"), LF.nucleo.exportfile.json({
       format: "lightflow-run", version: 1,
-      session: s, mode: r.modo, channel: r.canal,
+      session: s, mode: r.modo, channel: r.canal, response_correction: r.resposta,
       missing: r.falta, axis: xs, times_s: r.tempos, values: r.valores,
     }), "application/json");
   }

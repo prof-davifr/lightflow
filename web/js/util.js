@@ -59,6 +59,15 @@ LF.baixa = function (nome, conteudo, tipo) {
    inside the array is fine; the null array is not. */
 LF.vazio = function (n) { return new Array(n).fill(null); };
 
+/* Values for uPlot, with every NaN and Infinity turned into null.
+   uPlot (this version) leaves a gap ONLY at null. A NaN is skipped as a point
+   and the line is drawn straight across it, so a masked or clipped column
+   reads as an interpolated measurement. Everything that goes into setData
+   passes through here. */
+LF.serieY = function (y) {
+  return Array.from(y, function (v) { return v === null || !isFinite(v) ? null : v; });
+};
+
 /* Decimal places taken from the spacing between the axis ticks. A fixed count
    is wrong in both directions: on a 545.0 to 547.0 nm axis three places make
    every label read the same, and on a 380 to 780 nm axis they only add zeros. */
@@ -232,6 +241,9 @@ LF.selo = function (sel, texto, estado) {
   el.textContent = texto;
   el.className = "selo" + (estado ? " " + estado : "");
 };
+
+/* The frame slots carry Portuguese keys; the screen shows these names. */
+LF.ROT_QUADRO = { amostra: "sample", escuro: "dark", referencia: "reference", branco: "blank" };
 
 /* One-line message in the footer. Errors stay until the next message. */
 LF.mensagem = function (texto, erro) {

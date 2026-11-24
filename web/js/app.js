@@ -371,6 +371,47 @@ LF.telaAtual = "camera";
     });
   }
 
+  /* ---------------------------------------------------------- the header */
+
+  /* The house header starts collapsed to one strip, so the charts get the
+     height; a click opens it and the choice is remembered. Help is a page of
+     text with room to spare, so it shows the full header without changing
+     the choice. MWFlow and WaveCal-END do the same. */
+  const CHAVE_CABECALHO = "lf.cabecalho";
+
+  function cabecalhoCheio() {
+    return localStorage.getItem(CHAVE_CABECALHO) === "cheio";
+  }
+
+  function mostraCabecalho() {
+    const el = LF.q("#identidade");
+    const cheio = cabecalhoCheio() || LF.telaAtual === "ajuda";
+    if (el.classList.contains("compacto") === !cheio) return;
+    el.classList.toggle("compacto", !cheio);
+    el.setAttribute("aria-expanded", String(cheio));
+    el.title = cheio ? "Click to collapse the header" : "Click to show the full header";
+    /* The screens get their height from what is left, so they are measured
+       again now rather than on the next frame, which may never come. */
+    window.dispatchEvent(new Event("resize"));
+    const t = LF.telas[LF.telaAtual];
+    if (t && t.aoEntrar) t.aoEntrar();
+  }
+
+  function ligaCabecalho() {
+    const el = LF.q("#identidade");
+    el.setAttribute("role", "button");
+    el.tabIndex = 0;
+    const troca = function () {
+      localStorage.setItem(CHAVE_CABECALHO, cabecalhoCheio() ? "compacto" : "cheio");
+      mostraCabecalho();
+    };
+    el.addEventListener("click", troca);
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); troca(); }
+    });
+    mostraCabecalho();
+  }
+
   function mostra(nome) {
     LF.telaAtual = nome;
     LF.qq("#abas button").forEach(function (b) {
@@ -379,6 +420,7 @@ LF.telaAtual = "camera";
     LF.qq(".tela").forEach(function (t) {
       t.classList.toggle("ativa", t.id === "tela-" + nome);
     });
+    mostraCabecalho();
     const t = LF.telas[nome];
     if (t && t.aoEntrar) t.aoEntrar();
   }
@@ -402,6 +444,8 @@ LF.telaAtual = "camera";
     Object.keys(LF.telas).forEach(function (k) {
       if (LF.telas[k].inicia) LF.telas[k].inicia();
     });
+    /* After the screens: opening the header measures the current screen. */
+    ligaCabecalho();
     LF.telas.camera.listaDispositivos();
     mostraExposicao();
     mostraFiltro();

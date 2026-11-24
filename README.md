@@ -51,10 +51,11 @@ Two constraints are worth knowing before you start.
    where the unticked phosphor check lines landed; accept the fit when it says
    "checks within" a nanometre or two, then **Save**.
 6. Change to a continuous lamp — a white LED or a halogen bulb; a fluorescent
-   lamp lights only its lines. Cover the slit and press **Capture dark**. Put
-   the blank in and press **Capture reference**. The strip under the buttons
-   shows how old each one is, and says when one was taken at another exposure,
-   white balance or region and has to be taken again.
+   lamp lights only its lines. **Spectrum** is numbered steps that follow the
+   mode, and the one to do next is outlined: cover the slit and press
+   **Capture dark**, put the blank in and press **Capture reference**. Each
+   step shows how old its frame is, and turns red when it was taken at another
+   exposure, white balance or region and has to be taken again.
 7. The absorbance curve should now sit flat near zero. **That flat line is the
    real proof that the whole chain works.**
 8. Put the sample in. To follow a reaction, go to **Kinetics** and press

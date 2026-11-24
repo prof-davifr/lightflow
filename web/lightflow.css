@@ -45,6 +45,18 @@ body { display: flex; flex-direction: column; }
   #identidade .header-content { flex-direction: column; gap: 16px; }
   #identidade .header-logos { order: 3; }
 }
+/* Collapsed, the default: one 28 px strip with the name and the three logos
+   small, so the charts get the height. A click opens the full header and the
+   choice is remembered. MWFlow and WaveCal-END collapse the same way and to
+   the same pixels; change the three together. */
+#identidade { cursor: pointer; }
+#identidade.compacto { padding: 3px 14px; }
+#identidade.compacto .header-content { flex-direction: row; gap: 16px; }
+#identidade.compacto .logo-ifba { height: 22px; }
+#identidade.compacto .logo-group { height: 20px; }
+#identidade.compacto .header-logos { gap: 12px; order: 0; }
+#identidade.compacto h1 { margin: 0; font-size: 14px; }
+#identidade.compacto .subtitle { display: none; }
 
 /* ------------------------------------------------------------- header */
 #barra {
@@ -186,8 +198,38 @@ button.ajuda {
 /* One line, always: the chart under it takes its height from what is left, and
    a strip that wrapped when a warning appeared would resize the chart. The
    full text of a warning is in its title. */
-#estado-quadros { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; min-height: 16px; }
-#estado-quadros > * { overflow: hidden; text-overflow: ellipsis; }
+#linha-estado { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; min-height: 22px; align-items: center; }
+#linha-estado > * { flex: none; }
+#estado-quadros { display: flex; gap: 14px; flex: 0 1 auto !important; min-width: 0; overflow: hidden; }
+#estado-quadros > *, #rot-modo { overflow: hidden; text-overflow: ellipsis; }
+
+/* ------------------------------------------------------ spectrum layout */
+/* Everything above the chart keeps its height whatever the data say: the
+   chart is measured on every frame. The bar holds only fixed labels, so it
+   may wrap on a narrow screen; the status line never wraps, and the mode
+   label shrinks with an ellipsis, its full text in the title. */
+#rot-modo { flex: 0 1 auto !important; min-width: 0; }
+.grupo { display: flex; align-items: center; gap: 8px; }
+.rot-grupo { font-size: 11px; color: var(--tinta2); }
+/* The measurement channel reads as the one that counts. */
+#tela-espectro label.caixinha:has(#ver-g) { font-weight: 620; }
+
+#passos-esp > li { overflow: hidden; }
+#passos-esp > li[hidden] { display: none; }
+#passos-esp .acoes { flex-wrap: nowrap; }
+/* A button never wraps: a two-line button made the card, and so the chart,
+   change height when a long result appeared beside it. */
+#passos-esp button { flex: none; white-space: nowrap; }
+#passos-esp .titulo { align-self: flex-start; }
+#passos-esp .resultado, #passos-esp .dica {
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#passos-esp .resultado { color: var(--tinta2); }
+
+/* Chart and peak table side by side, the table narrower on a small screen.
+   Under the chart it took a quarter of the height. */
+.duas.lado { grid-template-columns: minmax(0, 1fr) clamp(230px, 26vw, 300px); min-height: 260px; }
+.duas.lado > .caixa:last-child { overflow: hidden; }
 
 /* ------------------------------------------------------ calibration steps */
 /* Numbered steps instead of a toolbar. The step to do next has a coloured

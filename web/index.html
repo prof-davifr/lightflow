@@ -14,7 +14,7 @@
      (WaveCal-END): IFBA on the left, the name and one line of what the
      program does in the middle, the research groups on the right. The three
      images live in `img/` — this page fetches nothing from a third party. -->
-<header id="identidade">
+<header id="identidade" class="compacto">
   <div class="header-content">
     <img src="img/ifba.png" alt="IFBA" class="logo-ifba">
     <div class="header-text">
@@ -196,26 +196,65 @@
 
 <!-- ----------------------------------------------------------- spectrum -->
 <section class="tela" id="tela-espectro">
-  <div class="cabeca">
-    <h2>Spectrum</h2>
-    <span id="rot-modo" class="marca">—</span>
-    <span id="rot-amax" class="marca" data-termo="amax">—</span>
-    <button class="ajuda" data-ir="modes">?</button>
-  </div>
+  <!-- The order of a measurement, as numbered steps: the one to do next is
+       outlined and has the only primary button. The mode decides which steps
+       exist (photometry.EXIGE); the ones it does not need are hidden. -->
+  <ol id="passos-esp" class="passos">
+    <li data-passo="escuro">
+      <span class="num">1</span>
+      <div class="corpo">
+        <span class="titulo" data-termo="dark">Dark</span>
+        <div class="acoes">
+          <button id="bt-escuro" data-principal>Capture dark</button>
+          <span class="resultado">—</span>
+        </div>
+        <span class="dica">Cover the slit, lamp still on</span>
+      </div>
+    </li>
+    <li data-passo="referencia">
+      <span class="num">2</span>
+      <div class="corpo">
+        <span class="titulo" data-termo="reference">Reference</span>
+        <div class="acoes">
+          <button id="bt-referencia" data-principal>Capture reference</button>
+          <span class="resultado">—</span>
+        </div>
+        <span class="dica">Blank cuvette in the beam</span>
+      </div>
+    </li>
+    <li data-passo="branco">
+      <span class="num">2</span>
+      <div class="corpo">
+        <span class="titulo" data-termo="blank">Blank</span>
+        <div class="acoes">
+          <button id="bt-branco" data-principal>Capture blank</button>
+          <span class="resultado">—</span>
+        </div>
+        <span class="dica">Blank cuvette, excitation on</span>
+      </div>
+    </li>
+    <li data-passo="amostra">
+      <span class="num">3</span>
+      <div class="corpo">
+        <span class="titulo">Sample</span>
+        <div class="acoes">
+          <button id="bt-salvar-espectro" data-principal>Save spectrum</button>
+          <button id="bt-csv-espectro">CSV</button>
+          <button id="bt-png-espectro" title="The chart as an image, with the mode and the date on it">PNG</button>
+        </div>
+        <span class="dica">Put the sample in: the chart is live</span>
+      </div>
+    </li>
+  </ol>
   <div class="barra-acao">
-    <button id="bt-escuro" data-termo="dark">Capture dark</button>
-    <button id="bt-referencia" data-termo="reference">Capture reference</button>
-    <button id="bt-branco" data-termo="blank">Capture blank</button>
+    <label class="caixinha" title="The measurement channel. A max, the response correction and every saved file use it."><input type="checkbox" id="ver-g" checked> G — measurement</label>
     <span class="sep"></span>
-    <button id="bt-salvar-espectro">Save spectrum</button>
-    <button id="bt-csv-espectro">CSV</button>
-    <button id="bt-png-espectro" title="The chart as an image, with the mode and the date on it">PNG</button>
-  </div>
-  <div class="barra-acao">
-    <label class="caixinha"><input type="checkbox" id="ver-r"> R</label>
-    <label class="caixinha"><input type="checkbox" id="ver-g" checked> G</label>
-    <label class="caixinha"><input type="checkbox" id="ver-b"> B</label>
-    <label class="caixinha"><input type="checkbox" id="ver-lum"> lum</label>
+    <span class="grupo" title="Drawn only, to compare. A max, the response correction and the saved file use G.">
+      <span class="rot-grupo">Cross-check:</span>
+      <label class="caixinha"><input type="checkbox" id="ver-r"> R</label>
+      <label class="caixinha"><input type="checkbox" id="ver-b"> B</label>
+      <label class="caixinha"><input type="checkbox" id="ver-lum"> lum</label>
+    </span>
     <span class="sep"></span>
     <label for="esc-y" data-termo="yscale">Y axis</label>
     <select id="esc-y"><option value="auto" selected>auto</option><option value="manual">fixed</option></select>
@@ -227,17 +266,28 @@
     <label class="caixinha" title="Write the wavelength above each peak in the table"><input type="checkbox" id="ver-rotulos"> Peak labels</label>
     <label for="esc-log" data-termo="logscale">Scale</label>
     <select id="esc-log"><option value="lin" selected>linear</option><option value="log">log</option></select>
+    <button class="ajuda" data-ir="modes">?</button>
   </div>
-  <div id="estado-quadros" class="tira"></div>
-  <div class="caixa cresce">
-    <div id="g-espectro" class="grafico"></div>
+  <!-- One line: what the chart shows, the ceiling on absorbance, and what the
+       steps above do not say. -->
+  <div id="linha-estado" class="tira">
+    <span id="rot-modo" class="marca">—</span>
+    <span id="rot-amax" class="marca" data-termo="amax">—</span>
+    <span id="estado-quadros"></span>
   </div>
-  <div class="caixa">
-    <h3>Peaks</h3>
-    <table id="tab-picos" class="tabela">
-      <thead><tr><th>Wavelength</th><th>Value</th><th data-termo="fwhm">FWHM</th><th>Prominence</th></tr></thead>
-      <tbody></tbody>
-    </table>
+  <!-- The peaks beside the chart, not under it: under it they took a quarter
+       of the height. The table still keeps eight rows, blank or not. -->
+  <div class="duas enche lado">
+    <div class="caixa cresce">
+      <div id="g-espectro" class="grafico"></div>
+    </div>
+    <div class="caixa">
+      <h3>Peaks</h3>
+      <table id="tab-picos" class="tabela">
+        <thead><tr><th>Wavelength</th><th>Value</th><th data-termo="fwhm">FWHM</th><th>Prominence</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 </section>
 

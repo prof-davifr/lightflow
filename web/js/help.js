@@ -35,8 +35,8 @@ LF.telas.ajuda = (function () {
       rot: "Mode",
       txt: "What quantity to compute from the frames: absorbance, "
         + "transmittance, emission or fluorescence. Each one needs different "
-        + "reference frames, and the strip under the spectrum says which are "
-        + "still missing.",
+        + "reference frames, and the numbered steps on the Spectrum tab show "
+        + "only the ones it needs.",
     },
     averaging: {
       rot: "Frames to average",
@@ -168,16 +168,24 @@ LF.telas.ajuda = (function () {
           <b>Fit</b>. Step 4 shows where the unticked check lines landed; accept
           the fit when it says "checks within" a nanometre or two, then
           <b>Save</b>.</li>
-        <li>Change to a continuous lamp: a white LED or a halogen bulb. Cover
-          the slit and press <b>Capture dark</b>. Put the blank in and press
-          <b>Capture reference</b>. Both are only valid for the exposure, white
-          balance and region they were taken with; the strip under the buttons
-          says when that is no longer true, and when the reference is old.</li>
+        <li>Change to a continuous lamp: a white LED or a halogen bulb. The
+          <b>Spectrum</b> tab is numbered steps, and the one to do next is
+          outlined: cover the slit and press <b>Capture dark</b>, put the blank
+          in and press <b>Capture reference</b>. Both are only valid for the
+          exposure, white balance and region they were taken with; a step taken
+          at other settings turns red and says which, and the line above the
+          chart says when the reference is old.</li>
         <li>The absorbance curve should now sit flat near zero. That flat line
           is the real proof that the whole chain works.</li>
         <li>Put the sample in. To follow a reaction, go to <b>Kinetics</b> and
           press <b>Start run</b>.</li>
-      </ol>`;
+        <li>Read the <b>G — measurement</b> curve. R, B and lum are drawn only
+          to compare; A max, the response correction and every saved file use
+          green.</li>
+      </ol>
+      <p>The header with the logos is one thin strip, so the charts get the
+        height. Click it to see the full header; click again to collapse it.
+        The program remembers the choice.</p>`;
     } },
 
     { id: "modes", rot: "The four modes", html: function () {

@@ -202,7 +202,58 @@ LF.telas.espectro = (function () {
     requestAnimationFrame(function () { pendente = false; pinta(); });
   }
 
+  /* ------------------------------------------------------------ the steps */
+
+  /* The steps the mode needs, in order: the frames it requires, then the
+     sample. Absorbance: dark, reference, sample. Emission: dark, sample. */
+  function passosDoModo() {
+    return (LF.nucleo.photometry.EXIGE[LF.estado.modo] || []).concat(["amostra"]);
+  }
+
+  /* Which step is done, which is next, and which frame was taken at other
+     settings. A frame at other settings is not done: it has to be taken
+     again, and its step says why. */
+  function atualizaPassos() {
+    const q = LF.estado.quadros, agora = LF.configAtual();
+    const ordem = passosDoModo();
+    let atual = null;
+    ordem.forEach(function (k) {
+      if (atual || k === "amostra") return;
+      if (!q[k] || divergencia(q[k].config, agora)) atual = k;
+    });
+    if (!atual) atual = "amostra";
+    /* The sample step holds three buttons, so it gets a little more room. */
+    LF.q("#passos-esp").style.gridTemplateColumns =
+      "repeat(" + (ordem.length - 1) + ", minmax(0, 1fr)) minmax(0, 1.25fr)";
+    LF.qq("#passos-esp > li").forEach(function (li) {
+      const k = li.dataset.passo, pos = ordem.indexOf(k);
+      li.hidden = pos < 0;
+      if (pos < 0) {
+        li.classList.remove("feito", "atual", "mau");
+        const b = li.querySelector("[data-principal]");
+        if (b) b.classList.remove("primario");
+        return;
+      }
+      const res = li.querySelector(".resultado");
+      const outra = k !== "amostra" && q[k] ? divergencia(q[k].config, agora) : "";
+      const feito = k !== "amostra" && !!q[k] && !outra;
+      li.classList.toggle("feito", feito);
+      li.classList.toggle("atual", k === atual && !outra);
+      li.classList.toggle("mau", !!outra);
+      li.querySelector(".num").textContent = feito ? "✓" : String(pos + 1);
+      if (res) {
+        res.textContent = !q[k] ? "not taken"
+          : outra ? "taken at another " + outra + ": capture again"
+          : q[k].n_quadros + " frames · " + idade(q[k].t) + " ago";
+        res.title = res.textContent;
+      }
+      const bt = li.querySelector("[data-principal]");
+      if (bt) bt.classList.toggle("primario", k === atual);
+    });
+  }
+
   function pinta() {
+    atualizaPassos();
     if (!plot || !ultimo) return;
     const n = ultimo.r.length;
     const xs = Array.from(LF.eixoAtual(n));
@@ -232,25 +283,19 @@ LF.telas.espectro = (function () {
   function mostraTira() {
     const q = LF.estado.quadros;
     const falta = faltando();
+    /* The steps above already say what is taken, how old and at which
+       settings. The strip keeps what they do not: an old reference, and how
+       the live sample is averaged. */
     const partes = [];
     const agora = LF.configAtual();
-    ["escuro", "referencia", "branco"].forEach(function (k) {
+    ["referencia", "branco"].forEach(function (k) {
       const rot = LF.ROT_QUADRO[k];
-      if (q[k]) {
-        partes.push("<b>" + rot + "</b> " + q[k].n_quadros + " frames · " + idade(q[k].t));
-        const outra = divergencia(q[k].config, agora);
-        if (outra) {
-          partes.push('<span class="falta" title="A ' + rot + " is only valid for the "
-            + "settings it was taken with. Capture it again.\">" + rot + " taken at another "
-            + outra + "</span>");
-        } else if (k !== "escuro" && Date.now() - q[k].t > IDADE_AVISO) {
-          partes.push('<span class="falta" title="A lamp drifts as it warms and the '
-            + "bench moves. Take the sample out and check that the absorbance of the "
-            + "blank still reads zero; if not, capture the " + rot + ' again.">'
-            + rot + " is " + idade(q[k].t) + " old — check it with the blank</span>");
-        }
-      } else if (falta.indexOf(k) >= 0) {
-        partes.push('<span class="falta">' + rot + " missing</span>");
+      if (q[k] && falta.indexOf(k) < 0 && passosDoModo().indexOf(k) >= 0
+        && !divergencia(q[k].config, agora) && Date.now() - q[k].t > IDADE_AVISO) {
+        partes.push('<span class="falta" title="A lamp drifts as it warms and the '
+          + "bench moves. Take the sample out and check that the absorbance of the "
+          + "blank still reads zero; if not, capture the " + rot + ' again.">'
+          + rot + " is " + idade(q[k].t) + " old — check it with the blank</span>");
       }
     });
     if (q.amostra) {
@@ -264,6 +309,7 @@ LF.telas.espectro = (function () {
       ? "raw intensity — " + falta.map(function (k) { return LF.ROT_QUADRO[k]; })
         .join(" and ") + " missing"
       : (semValor() ? rotModo + " — no column has a value" : rotModo);
+    LF.q("#rot-modo").title = LF.q("#rot-modo").textContent;
 
     /* The honest ceiling on absorbance, from the measured dark noise. */
     const el = LF.q("#rot-amax");

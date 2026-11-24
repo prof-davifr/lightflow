@@ -24,12 +24,15 @@ Read `README.md` first. This file records only what bites.
 - The legend is **not** inside the height `setSize` asks for. `LF.ajusta`
   subtracts it; resizing a plot by hand will overflow the box.
 - `LF.ajusta` runs on every frame, so the box it measures must get its height
-  from the screen, never from its content. The status strip under the Spectrum
-  buttons is one line, `nowrap`, for the same reason: a warning that wrapped
+  from the screen, never from its content. The status line above the Spectrum
+  chart is one line, `nowrap`, for the same reason: a warning that wrapped
   would resize the chart. Content-sized, the chart loses 16 px
   per frame (Calibration had an `auto` grid row). A neighbour whose height
   changes with the data resizes the chart too: the peak table under Spectrum
-  did, and a frozen y axis still bounced. It now keeps eight rows, blank or not.
+  did, and a frozen y axis still bounced. It now sits beside the chart and
+  still keeps eight rows, blank or not. The Spectrum steps keep one line per
+  row for the same reason: their buttons never wrap and their results end in
+  an ellipsis — a two-line button grew the card when a long result appeared.
 - Emit `NaN`, never `Infinity`, from `nucleo/` — and turn both into `null`
   before `setData`, through `LF.serieY`. **The vendored uPlot leaves a gap only
   at `null`.** A `NaN` is skipped as a point and the line is drawn straight
@@ -98,6 +101,14 @@ again**, and the program clears the dark and the reference when it changes.
   tall. Its measurements are in **pixels**, not `rem`: the root font is 13 px
   here and 16 px in MWFlow, and the same `rem` would give two different
   headers. It changes together with the other tools, never alone.
+- **The header starts collapsed** (`#identidade.compacto`): one 28 px strip
+  with the name, IFBA at 22 px and GPEND and GPSC at 20 px, the subtitle
+  hidden. A click (or Enter) opens the full header, and the choice stays in
+  `localStorage` (`lf.cabecalho`; `mw.cabecalho` in MWFlow,
+  `wavecal.cabecalho` in WaveCal-END). Help shows the full header without
+  changing the choice. After a toggle the current screen's `aoEntrar` runs,
+  because a chart that only measures itself on a frame would keep its old
+  height until the camera sends one.
 
 ## Colour ramps
 
@@ -170,8 +181,9 @@ again**, and the program clears the dark and the reference when it changes.
   `PISO_RUIDO` is there because a covered sensor often reads 0 on every frame,
   and 3σ is then 0.
 - Every captured dark, reference and blank carries `config` (exposure, white
-  balance, linearization, ROI signature). The strip compares it with the
-  current settings; it does not refuse to compute, it says so.
+  balance, linearization, ROI signature). The Spectrum steps compare it with
+  the current settings; a step taken at other settings turns red and is next
+  again. It does not refuse to compute, it says so.
 - A capture always uses `Acumulador`, never the live `Filtro`. A running mean
   remembers frames from before the slit was covered, and a peak hold is not a
   measurement.

@@ -74,6 +74,8 @@ LF.telas.dados = (function () {
     const especiais = {};
     const amostras = [];
     linhas.forEach(function (r) {
+      /* Stored rows keep r, g and b; lum and R+G+B are mixed on read. */
+      LF.nucleo.frame.completaCanais(r);
       if (r.tipo === "amostra") amostras.push(r);
       else especiais[r.tipo] = r;
     });

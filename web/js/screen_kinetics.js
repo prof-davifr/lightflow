@@ -292,6 +292,7 @@ LF.telas.cinetica = (function () {
 
   return {
     inicia: inicia, recalibra: recalibra, solta: solta,
+    emCurso: function () { return !!corrida; },
     get corrida() { return corrida; },
     aoEntrar: function () {
       LF.espectrograma.redimensiona();

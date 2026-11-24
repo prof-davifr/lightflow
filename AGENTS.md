@@ -67,11 +67,25 @@ again**, and the program clears the dark and the reference when it changes.
 
 ## Camera facts
 
-- **Green is the measurement channel.** `getUserMedia` gives no control over the
-  pixel format; the browser negotiates MJPG or YUYV, and both subsample chroma
-  *horizontally*, which is the spectral axis. Red and blue arrive at half
-  resolution along the very axis being measured. The luminance mix uses Rec.709
-  weights on **linear** values for the same reason.
+- **Green is the default measurement channel.** `getUserMedia` gives no
+  control over the pixel format; the browser negotiates MJPG or YUYV, and both
+  subsample chroma *horizontally*, which is the spectral axis. Red and blue
+  arrive at half resolution along the very axis being measured. The luminance
+  mix uses Rec.709 weights on **linear** values for the same reason.
+- **R+G+B is the other measurement channel** (`frame.MEDIDAS`). Green alone
+  sees about 505 to 608 nm on this bench, and a sample that absorbs in the blue
+  or the red was a gap. The sum is a ratio of like with like column by column,
+  so it is honest, only less sharp. Stored rows keep `r`, `g` and `b` only;
+  `frame.completaCanais` mixes `lum` and `rgb` on read, with the sum of the
+  spreads as the sigma (the bound for full correlation, so the noise floor is
+  never too low). One Kinetics run is one channel: the selector refuses to
+  change during a run.
+- **The camera's colour processing does not cancel in S / R.** With a green ink
+  in the beam, blue read *higher* than the reference between 521 and 538 nm,
+  where the reference had none. It depends on the scene, so it survives the
+  ratio. Green was right in the same frames. Sharpening (`sharpness=93`, the
+  driver default) did the same to a narrow transmission band: 137 % at its
+  peak, 85 % with `sharpness=0`.
 - `applyConstraints` resolving does **not** mean the camera obeyed. Always read
   `getSettings()` back and compare — `locks.confere` does this, and it is the
   only proof the lock took.
@@ -194,10 +208,12 @@ again**, and the program clears the dark and the reference when it changes.
 - `exposicao.proximo` reads the **raw** peak (`extract` returns `pico`), for the
   same reason saturation is counted on raw codes.
 - The response correction (`nucleo/resposta.js`) multiplies emission and
-  fluorescence on the measurement channel only, on read. It is NaN outside the
-  curve rather than extrapolated, and `deLampada` refuses a lamp that lights a
-  third of the columns or less: a curve from a line lamp is that lamp's
-  spectrum, inverted.
+  fluorescence on the measurement channel only, on read. A curve belongs to the
+  channel it was measured on (`canal`, written to the file as `# channel:`); a
+  curve without one is green's, and it is not applied to R+G+B. It is NaN
+  outside the curve rather than extrapolated, and `deLampada` refuses a lamp
+  that lights a third of the columns or less: a curve from a line lamp is that
+  lamp's spectrum, inverted.
 
 ## Storage
 

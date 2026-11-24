@@ -101,6 +101,14 @@
     </select>
   </div>
   <div class="campo">
+    <label for="canal" data-termo="channel">Measurement channel</label>
+    <select id="canal">
+      <option value="g" selected>G — sharpest, green only</option>
+      <option value="rgb">R+G+B — widest band</option>
+    </select>
+    <span id="canal-val" class="val">—</span>
+  </div>
+  <div class="campo">
     <label for="media-n" data-termo="averaging">Frames to average</label>
     <select id="media-n">
       <option>1</option><option>4</option><option>8</option>
@@ -247,13 +255,15 @@
     </li>
   </ol>
   <div class="barra-acao">
-    <label class="caixinha" title="The measurement channel. A max, the response correction and every saved file use it."><input type="checkbox" id="ver-g" checked> G — measurement</label>
+    <label class="caixinha" title="The measurement channel. A max, the response correction and every saved file use it."><input type="checkbox" id="ver-medida" checked> <span id="rot-medida">G</span> — measurement</label>
     <span class="sep"></span>
-    <span class="grupo" title="Drawn only, to compare. A max, the response correction and the saved file use G.">
+    <span class="grupo" title="Drawn only, to compare. A max, the response correction and the saved file use the measurement channel.">
       <span class="rot-grupo">Cross-check:</span>
       <label class="caixinha"><input type="checkbox" id="ver-r"> R</label>
+      <label class="caixinha"><input type="checkbox" id="ver-g"> G</label>
       <label class="caixinha"><input type="checkbox" id="ver-b"> B</label>
       <label class="caixinha"><input type="checkbox" id="ver-lum"> lum</label>
+      <label class="caixinha"><input type="checkbox" id="ver-rgb"> R+G+B</label>
     </span>
     <span class="sep"></span>
     <label for="esc-y" data-termo="yscale">Y axis</label>

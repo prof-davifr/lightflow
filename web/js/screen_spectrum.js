@@ -17,15 +17,21 @@ LF.telas.espectro = (function () {
   const IDADE_AVISO = 15 * 60 * 1000;
   /* Absorbance sits on a baseline, so the auto range keeps zero in view. */
   const escY = LF.escalaY({ faixa: { inclui_zero: true } });
+  /* The first series is the measurement, on whichever channel is selected;
+     the rest are cross-checks. The cross-check that is the measurement channel
+     is hidden, so no line is drawn twice. */
+  const ROT_CANAL = { r: "R", g: "G", b: "B", lum: "lum", rgb: "R+G+B" };
   const CANAIS = [
-    { k: "r", rot: "R", cor: LF.cor.canal.r },
-    { k: "g", rot: "G", cor: LF.cor.canal.g },
-    { k: "b", rot: "B", cor: LF.cor.canal.b },
-    { k: "lum", rot: "lum", cor: LF.cor.canal.lum },
+    { k: "medida" },
+    { k: "r" }, { k: "g" }, { k: "b" }, { k: "lum" }, { k: "rgb" },
   ];
+  function canalDe(c) { return c.k === "medida" ? LF.estado.canal : c.k; }
 
   function visiveis() {
-    return CANAIS.filter(function (c) { return LF.q("#ver-" + c.k).checked; });
+    return CANAIS.filter(function (c) {
+      if (c.k !== "medida" && c.k === LF.estado.canal) return false;
+      return LF.q("#ver-" + c.k).checked;
+    });
   }
 
   /* What can actually be computed with the frames in hand. */
@@ -78,7 +84,7 @@ LF.telas.espectro = (function () {
      a column number has no colour. */
   function pintaCores(u) {
     if (!LF.q("#ver-cores").checked || !LF.calibrado()) return;
-    const k = 1 + CANAIS.findIndex(function (c) { return c.k === LF.estado.canal; });
+    const k = 1;                       // the measurement series
     if (!u.series[k] || !u.series[k].show) return;
     const xs = u.data[0], ys = u.data[k];
     if (!xs || !ys) return;
@@ -157,7 +163,10 @@ LF.telas.espectro = (function () {
         y: log ? { distr: 4, asinh: ASINH, range: escY.range } : { range: escY.range },
       },
       axes: [LF.eixo(LF.unidadeX(), 0), eixoY],
-      series: [{}].concat(CANAIS.map(function (c) { return LF.serie(c.rot, c.cor); })),
+      series: [{}].concat(CANAIS.map(function (c) {
+        const k = canalDe(c);
+        return LF.serie(ROT_CANAL[k], LF.cor.canal[k]);
+      })),
       hooks: {
         drawAxes: [pintaCores],
         /* Clipped columns are shaded in the alert colour straight onto the
@@ -183,7 +192,7 @@ LF.telas.espectro = (function () {
           ctx.restore();
         }, pintaRotulos],
       },
-    }, [LF.vazio(2), LF.vazio(2), LF.vazio(2), LF.vazio(2), LF.vazio(2)], el);
+    }, [LF.vazio(2)].concat(CANAIS.map(function () { return LF.vazio(2); })), el);
     LF.ajusta(plot, el);
   }
 
@@ -266,7 +275,7 @@ LF.telas.espectro = (function () {
     const mostra = visiveis().map(function (c) { return c.k; });
     CANAIS.forEach(function (c) {
       if (mostra.indexOf(c.k) < 0) { dados.push(LF.vazio(n)); return; }
-      const y = serieDe(c.k);
+      const y = serieDe(canalDe(c));
       dados.push(y ? ordem(LF.serieY(y)) : LF.vazio(n));
     });
     plot.setData(dados);
@@ -470,7 +479,26 @@ LF.telas.espectro = (function () {
     CANAIS.forEach(function (c) {
       LF.q("#ver-" + c.k).addEventListener("change", pinta);
     });
+    mostraCanal();
     trocaModo();
+  }
+
+  /* The measurement series takes the channel's name and colour, and the
+     cross-check for the same channel goes away. uPlot fixes a series' colour
+     when the chart is built, so the chart is built again. */
+  function mostraCanal() {
+    const k = LF.estado.canal;
+    LF.q("#rot-medida").textContent = ROT_CANAL[k];
+    CANAIS.forEach(function (c) {
+      if (c.k === "medida") return;
+      /* style, not `hidden`: the label's own display: flex wins over it. */
+      LF.q("#ver-" + c.k).closest("label").style.display = c.k === k ? "none" : "";
+    });
+  }
+
+  function trocaCanal() {
+    mostraCanal();
+    refaz();
   }
 
   function trocaModo() {
@@ -495,7 +523,7 @@ LF.telas.espectro = (function () {
   }
 
   return {
-    inicia: inicia, redesenha: pinta, trocaModo: trocaModo,
+    inicia: inicia, redesenha: pinta, trocaModo: trocaModo, trocaCanal: trocaCanal,
     solta: function () { if (escY.solta) escY.solta(); },
     serieDe: serieDe, unidade: unidade, faltando: faltando, refaz: refaz,
     get ultimo() { return ultimo; },

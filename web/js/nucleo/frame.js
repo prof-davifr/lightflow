@@ -20,8 +20,15 @@
    axis. Red and blue therefore arrive at half the resolution along the very
    axis being measured. Green is the only channel at full resolution, so green
    is the default for the measurement, and the luminance mix uses the Rec.709
-   weights, which lean on green for the same reason. Red and blue are for
-   cross-checking and for the ends where green runs out — never for fine work. */
+   weights, which lean on green for the same reason.
+
+   Green alone, though, sees only its own filter band: about 505 to 608 nm on
+   this bench, so a sample that absorbs in the blue or the red reads as a gap.
+   The sum R+G+B is the other measurement channel. It covers every column any
+   filter passes, at the price of red and blue's half resolution and of the
+   colour processing a camera applies to them. Any single column is still a
+   ratio of like with like, since sample, dark and reference all use the same
+   sum. */
 
 const SRGB = "srgb";
 
@@ -85,6 +92,7 @@ export function assinatura(roi, larg, alt) {
      r, g, b   the three camera channels, kept apart because a Bayer filter
                gives each one its own spectral response
      lum       the Rec.709 mix of the three, on linear values
+     rgb       the plain sum of the three, the wide measurement channel
    plus:
      clip      per column, how many raw samples reached LIMIAR_SATUR
      used      per column, how many rows actually fell inside the image
@@ -98,7 +106,7 @@ export function extract(img, roi, lut, limiar) {
   const lim = limiar === undefined ? LIMIAR_SATUR : limiar;
   const w = roi.w | 0, h = roi.h | 0;
   const r = new Float32Array(w), g = new Float32Array(w), b = new Float32Array(w);
-  const lum = new Float32Array(w);
+  const lum = new Float32Array(w), rgb = new Float32Array(w);
   const clip = new Uint16Array(w), used = new Uint16Array(w);
 
   const rad = (roi.angle || 0) * Math.PI / 180;
@@ -145,18 +153,55 @@ export function extract(img, roi, lut, limiar) {
       n++;
     }
     if (n === 0) {
-      r[i] = g[i] = b[i] = lum[i] = NaN;
+      r[i] = g[i] = b[i] = lum[i] = rgb[i] = NaN;
     } else {
       r[i] = sr / n; g[i] = sg / n; b[i] = sb / n;
       lum[i] = KR * r[i] + KG * g[i] + KB * b[i];
+      rgb[i] = r[i] + g[i] + b[i];
     }
     clip[i] = nc; used[i] = n; clipTotal += nc;
   }
-  return { r: r, g: g, b: b, lum: lum, clip: clip, used: used, clipTotal: clipTotal,
-    pico: pico };
+  return { r: r, g: g, b: b, lum: lum, rgb: rgb, clip: clip, used: used,
+    clipTotal: clipTotal, pico: pico };
 }
 
-export const CANAIS = ["r", "g", "b", "lum"];
+export const CANAIS = ["r", "g", "b", "lum", "rgb"];
+
+/* The channels a measurement can be made on. */
+export const MEDIDAS = ["g", "rgb"];
+
+/* The two mixed channels, from r, g and b, where a frame lacks them. A stored
+   spectrum keeps only r, g and b, and a line built by hand may too.
+
+   The spread of a mix is not the mix of the spreads: the three channels of one
+   pixel are correlated, more so after a camera rebuilds them from luma and
+   chroma. Summing the standard deviations is the bound for full correlation,
+   so the noise floor it gives is never lower than the true one. Fills in
+   place and returns the frame. */
+export function completaCanais(q) {
+  if (!q || !q.r || !q.g || !q.b) return q;
+  const n = q.g.length;
+  const mistura = function (fonte, kr, kg, kb) {
+    const y = new Float32Array(n);
+    for (let i = 0; i < n; i++) y[i] = kr * fonte.r[i] + kg * fonte.g[i] + kb * fonte.b[i];
+    return y;
+  };
+  if (!q.lum) q.lum = mistura(q, KR, KG, KB);
+  if (!q.rgb) q.rgb = mistura(q, 1, 1, 1);
+  const s = q.sigma;
+  if (s && s.r && s.g && s.b) {
+    if (!s.lum) s.lum = mistura(s, KR, KG, KB);
+    if (!s.rgb) s.rgb = mistura(s, 1, 1, 1);
+  }
+  return q;
+}
+
+/* One Float64Array of `w` per channel. */
+function porCanal(w) {
+  const o = {};
+  for (let c = 0; c < CANAIS.length; c++) o[CANAIS[c]] = new Float64Array(w);
+  return o;
+}
 
 /* ------------------------------------------------------ finding the stripe
 
@@ -275,12 +320,13 @@ export function faixaHorizontal(perfil) {
 export class Acumulador {
   constructor(w) {
     this.w = w;
-    this.soma = { r: new Float64Array(w), g: new Float64Array(w), b: new Float64Array(w), lum: new Float64Array(w) };
-    this.soma2 = { r: new Float64Array(w), g: new Float64Array(w), b: new Float64Array(w), lum: new Float64Array(w) };
+    this.soma = porCanal(w);
+    this.soma2 = porCanal(w);
     this.clip = new Uint32Array(w);
     this.n = 0; this.clipTotal = 0;
   }
   poe(linha) {
+    completaCanais(linha);
     for (let c = 0; c < CANAIS.length; c++) {
       const k = CANAIS[c], v = linha[k], s = this.soma[k], s2 = this.soma2[k];
       for (let i = 0; i < this.w; i++) { s[i] += v[i]; s2[i] += v[i] * v[i]; }
@@ -356,6 +402,7 @@ export class Filtro {
       this.bloco.limpa();
       return m;
     }
+    completaCanais(linha);
     this.n++;
     const a = this.modo === "exp" ? 1 / Math.min(this.n, this.N) : 0;
     for (let c = 0; c < CANAIS.length; c++) {

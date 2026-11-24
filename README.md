@@ -129,8 +129,16 @@ tab; that is the number to trust.
 
 Red and blue arrive at half resolution along the spectral axis, because both
 MJPG and YUYV subsample chroma horizontally and horizontal is the dispersion
-direction. **Green is the measurement channel**, always: there is no setting to
-change it. Red and blue can still be drawn on the Spectrum tab as cross-checks.
+direction. That is why **green is the default measurement channel**: it is the
+sharpest. But green sees only its own filter band, about 505 to 608 nm on a
+white LED, and a sample that absorbs in the blue or the red reads as a gap.
+**Measurement channel → R+G+B** measures on the sum of the three instead, over
+every column any filter passes (about 440 to 650 nm on the same lamp). A narrow
+band reads a little wider there, and red and blue carry the camera's colour
+processing. Every capture keeps all three channels, so changing the
+measurement channel needs no new dark or reference, and a saved run is rebuilt
+on whichever channel is selected. The others can still be drawn on the Spectrum
+tab as cross-checks.
 
 Some camera controls — sharpening, the hardware gamma, backlight compensation —
 are applied before the browser sees anything and no browser API reaches them. On

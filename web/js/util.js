@@ -8,7 +8,7 @@ const LF = {
     seq: ["#7ec8d8", "#3ba3bd", "#0f7d99", "#08536b"],
     cat: ["#0089a8", "#a53c74"],
     /* One colour per camera channel, so R/G/B always read the same way. */
-    canal: { r: "#c0392b", g: "#1e8449", b: "#2471a3", lum: "#22262b" },
+    canal: { r: "#c0392b", g: "#1e8449", b: "#2471a3", lum: "#22262b", rgb: "#7d3c98" },
     tinta: "#22262b", tinta2: "#6b7280", grade: "#e4e6ea",
     alerta: "#a53c74", bom: "#0f7d99",
   },

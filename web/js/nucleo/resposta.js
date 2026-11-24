@@ -29,14 +29,20 @@ const K_MIN = 1e-3, K_MAX = 1e3;
                          here a comma is a decimal separator, as in a file
                          saved by a spreadsheet in a comma locale
    Lines that are not exactly two numbers (headers, comments starting with #)
-   are skipped. The wavelengths must rise and there must be at least two.
+   are skipped. The wavelengths must rise and there must be at least two. A
+   comment "# channel: rgb", which escreveCoeficientes writes, names the
+   channel the curve was measured on.
 
-   Returns {nm: Float64Array, k: Float64Array}. Throws on a file that cannot be
+   Returns {nm: Float64Array, k: Float64Array}, with `canal` when the file
+   names one. Throws on a file that cannot be
    a response curve, rather than returning one that silently is not. */
 export function leCoeficientes(texto) {
   const nm = [], k = [];
+  let canal;
   String(texto).split(/\r?\n/).forEach(function (bruta) {
     const l = bruta.trim();
+    const m = /^#\s*channel:\s*([a-z]+)\s*$/i.exec(l);
+    if (m) canal = m[1].toLowerCase();
     if (!l || l[0] === "#") return;
     let campos;
     if (/[\s;]/.test(l)) {
@@ -55,7 +61,9 @@ export function leCoeficientes(texto) {
     if (i > 0 && !(nm[i] > nm[i - 1])) throw new Error("the wavelengths must rise: " + nm[i - 1] + " then " + nm[i]);
     if (!(k[i] >= K_MIN && k[i] <= K_MAX)) throw new Error("coefficient " + k[i] + " at " + nm[i] + " nm is not between " + K_MIN + " and " + K_MAX);
   }
-  return { nm: Float64Array.from(nm), k: Float64Array.from(k) };
+  const curva = { nm: Float64Array.from(nm), k: Float64Array.from(k) };
+  if (canal) curva.canal = canal;
+  return curva;
 }
 
 /* The curve as CSV, in the same layout leCoeficientes reads first. */

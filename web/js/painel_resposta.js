@@ -13,9 +13,16 @@ LF.resposta = (function () {
 
   function modoUsa(modo) { return modo === "emission" || modo === "fluorescence"; }
 
-  /* True when the correction will be applied to this mode on this axis. */
+  /* The channel a curve was measured on. A curve from before the channel
+     could be chosen was measured on green. */
+  function canalDa(c) { return (c && c.canal) || "g"; }
+
+  /* True when the correction will be applied to this mode on this axis. A
+     curve corrects only the channel it was measured on: the filters weigh the
+     wavelengths differently, so green's curve is wrong for R+G+B. */
   function ativa(modo, eixo) {
-    return !!(LF.estado.respostaLigada && LF.estado.resposta && eixo && modoUsa(modo));
+    return !!(LF.estado.respostaLigada && LF.estado.resposta && eixo && modoUsa(modo)
+      && canalDa(LF.estado.resposta) === LF.estado.canal);
   }
 
   function coef(eixo) {
@@ -39,7 +46,7 @@ LF.resposta = (function () {
     try {
       if (!c) { localStorage.removeItem(CHAVE); return; }
       localStorage.setItem(CHAVE, JSON.stringify({
-        nm: Array.from(c.nm), k: Array.from(c.k), nome: c.nome,
+        nm: Array.from(c.nm), k: Array.from(c.k), nome: c.nome, canal: canalDa(c),
       }));
     } catch (e) { /* private mode: the curve lasts for this page only */ }
   }
@@ -49,7 +56,8 @@ LF.resposta = (function () {
       const t = localStorage.getItem(CHAVE);
       if (!t) return;
       const o = JSON.parse(t);
-      LF.estado.resposta = { nm: Float64Array.from(o.nm), k: Float64Array.from(o.k), nome: o.nome };
+      LF.estado.resposta = { nm: Float64Array.from(o.nm), k: Float64Array.from(o.k), nome: o.nome,
+        canal: canalDa(o) };
     } catch (e) { LF.estado.resposta = null; }
   }
 
@@ -60,7 +68,8 @@ LF.resposta = (function () {
       el.textContent = "no curve loaded";
     } else {
       el.textContent = c.nome + " · " + LF.num(c.nm[0], 0) + " to "
-        + LF.num(c.nm[c.nm.length - 1], 0) + " nm · " + c.nm.length + " points";
+        + LF.num(c.nm[c.nm.length - 1], 0) + " nm · " + c.nm.length + " points"
+        + (canalDa(c) !== LF.estado.canal ? " · measured on another channel, not applied" : "");
     }
     LF.q("#bt-resposta-exporta").disabled = !c;
     LF.q("#bt-resposta-tira").disabled = !c;
@@ -114,6 +123,7 @@ LF.resposta = (function () {
     }
     try {
       const c = LF.nucleo.resposta.deLampada(q.amostra[canal], q.escuro[canal], LF.estado.eixo, T);
+      c.canal = canal;
       poe(c, "lamp " + T + " K, " + new Date().toLocaleDateString());
       LF.mensagem("response curve computed from a " + T + " K lamp over "
         + LF.num(c.nm[0], 0) + " to " + LF.num(c.nm[c.nm.length - 1], 0)
@@ -128,7 +138,7 @@ LF.resposta = (function () {
     if (!c) return;
     const nome = String(c.nome).replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 60);
     LF.baixa("lightflow-response-" + nome + ".csv",
-      LF.nucleo.resposta.escreveCoeficientes(c, { name: c.nome }), "text/csv");
+      LF.nucleo.resposta.escreveCoeficientes(c, { name: c.nome, channel: canalDa(c) }), "text/csv");
   }
 
   function tira() {
@@ -165,5 +175,5 @@ LF.resposta = (function () {
   /* Registered as a screen so LF.inicia starts it with the others. */
   LF.telas.resposta = { inicia: inicia };
 
-  return { ativa: ativa, corrige: corrige };
+  return { ativa: ativa, corrige: corrige, mostra: mostra };
 })();

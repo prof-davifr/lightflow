@@ -7,7 +7,7 @@
    numbers, not two independent measurements of the same instant. */
 
 LF.estado = {
-  canal: "g",           // always green: the only channel at full resolution
+  canal: "g",           // frame.js MEDIDAS: green, sharpest, or R+G+B, widest
   modo: "absorbance",
   mediaN: 16,
   filtro: "bloco",      // frame.js FILTROS: block mean, running mean, peak hold
@@ -94,6 +94,30 @@ LF.telaAtual = "camera";
     }
     LF.selo("#selo-taxa", LF.num(LF.camera.fps(), 1) + " fps");
   }
+
+  /* The measurement channel, remembered across visits. Nothing captured has
+     to be taken again: every frame carries all the channels, and a saved run
+     is rebuilt on whichever channel is selected when it is exported. */
+  const CHAVE_CANAL = "lf.canal";
+  const DESCR_CANAL = {
+    g: "sharpest · green band only",
+    rgb: "every filter · less sharp",
+  };
+  function poeCanal(k) {
+    if (LF.nucleo.frame.MEDIDAS.indexOf(k) < 0) k = "g";
+    LF.estado.canal = k;
+    LF.q("#canal").value = k;
+    LF.q("#canal-val").textContent = DESCR_CANAL[k];
+    try { localStorage.setItem(CHAVE_CANAL, k); } catch (e) { /* private mode */ }
+    LF.telas.espectro.trocaCanal();
+    LF.telas.cinetica.solta();
+    LF.resposta.mostra();
+  }
+  LF.recuperaCanal = function () {
+    let k = "g";
+    try { k = localStorage.getItem(CHAVE_CANAL) || "g"; } catch (e) { /* private mode */ }
+    poeCanal(k);
+  };
 
   /* A new filter on the next frame, empty. */
   function zeraFiltro() { filtro = null; }
@@ -329,6 +353,18 @@ LF.telaAtual = "camera";
       LF.telas.espectro.trocaModo();
       LF.telas.cinetica.solta();
     });
+    LF.q("#canal").addEventListener("change", function () {
+      if (LF.telas.cinetica.emCurso()) {
+        this.value = LF.estado.canal;
+        LF.mensagem("stop the run first: one run is recorded on one channel", true);
+        return;
+      }
+      poeCanal(this.value);
+      LF.mensagem(this.value === "rgb"
+        ? "measuring on R+G+B: every column a colour filter passes. Red and blue "
+          + "come at half resolution, so a narrow band reads a little wider"
+        : "measuring on G: the sharpest channel, over the green band only");
+    });
     LF.q("#media-n").addEventListener("change", function () {
       LF.estado.mediaN = parseInt(this.value, 10);
       zeraFiltro(); mostraFiltro();
@@ -444,6 +480,7 @@ LF.telaAtual = "camera";
     Object.keys(LF.telas).forEach(function (k) {
       if (LF.telas[k].inicia) LF.telas[k].inicia();
     });
+    LF.recuperaCanal();
     /* After the screens: opening the header measures the current screen. */
     ligaCabecalho();
     LF.telas.camera.listaDispositivos();

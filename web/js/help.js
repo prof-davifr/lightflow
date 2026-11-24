@@ -26,10 +26,12 @@ LF.telas.ajuda = (function () {
     },
     channel: {
       rot: "Channel",
-      txt: "The camera's colour channel that carries the measurement. It is "
-        + "always green, because green is the only one delivered at full "
-        + "resolution along the spectral axis. Red and blue can still be drawn "
-        + "on the Spectrum tab as cross-checks.",
+      txt: "The camera channel that carries the measurement. G is the sharpest, "
+        + "because green is the only one delivered at full resolution along the "
+        + "spectral axis, but it sees only the green band. R+G+B sees every "
+        + "column any colour filter passes, a little less sharply. Changing it "
+        + "needs no new dark or reference. The other channels can still be "
+        + "drawn on the Spectrum tab as cross-checks.",
     },
     mode: {
       rot: "Mode",

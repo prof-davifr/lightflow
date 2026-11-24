@@ -26,13 +26,17 @@ Read `README.md` first. This file records only what bites.
 - `LF.ajusta` runs on every frame, so the box it measures must get its height
   from the screen, never from its content. The status line above the Spectrum
   chart is one line, `nowrap`, for the same reason: a warning that wrapped
-  would resize the chart. Content-sized, the chart loses 16 px
+  would resize the chart. So is the footer message; its whole text is in its
+  `title`. Content-sized, the chart loses 16 px
   per frame (Calibration had an `auto` grid row). A neighbour whose height
   changes with the data resizes the chart too: the peak table under Spectrum
   did, and a frozen y axis still bounced. It now sits beside the chart and
   still keeps eight rows, blank or not. The Spectrum steps keep one line per
   row for the same reason: their buttons never wrap and their results end in
   an ellipsis — a two-line button grew the card when a long result appeared.
+- `LF.ajusta` remembers every chart it sized and sizes them all again on a
+  window `resize`. Without a camera no frame comes, and a chart sized only on
+  a frame kept its old width after the window changed.
 - Emit `NaN`, never `Infinity`, from `nucleo/` — and turn both into `null`
   before `setData`, through `LF.serieY`. **The vendored uPlot leaves a gap only
   at `null`.** A `NaN` is skipped as a point and the line is drawn straight

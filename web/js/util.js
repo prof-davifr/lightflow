@@ -225,6 +225,7 @@ LF.serie = function (rotulo, cor, largura) {
    legend height and lands on top of whatever comes next. */
 LF.ajusta = function (plot, el) {
   if (!plot || !el) return;
+  ajustados.set(el, plot);
   const r = el.getBoundingClientRect();
   const leg = plot.root ? plot.root.querySelector(".u-legend") : null;
   const alturaLegenda = leg ? leg.getBoundingClientRect().height : 0;
@@ -233,6 +234,20 @@ LF.ajusta = function (plot, el) {
     plot.setSize({ width: Math.floor(r.width - 16), height: altura });
   }
 };
+
+/* Every chart LF.ajusta has sized, by the box that holds it. A screen sizes
+   its chart when it gets a frame, and without a camera none comes: a window
+   resize would leave the chart at its old size, wider than its box or short of
+   it. A hidden screen measures 0 wide, and LF.ajusta skips it. */
+const ajustados = new Map();
+let redimensiona = 0;
+window.addEventListener("resize", function () {
+  if (redimensiona) return;
+  redimensiona = requestAnimationFrame(function () {
+    redimensiona = 0;
+    ajustados.forEach(function (plot, el) { LF.ajusta(plot, el); });
+  });
+});
 
 /* Status pill in the header. `estado` is "", "ok" or "mau". */
 LF.selo = function (sel, texto, estado) {
@@ -250,6 +265,8 @@ LF.mensagem = function (texto, erro) {
   const el = LF.q("#mensagem");
   if (!el) return;
   el.textContent = texto;
+  /* The footer keeps one line (lightflow.css); the whole text is here. */
+  el.title = texto;
   el.classList.toggle("erro", !!erro);
 };
 

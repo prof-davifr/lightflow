@@ -372,7 +372,10 @@ button.ajuda {
   padding: 5px 14px; font-size: 11px; color: var(--tinta2);
   background: var(--fundo); border-top: 1px solid var(--grade);
 }
-#rodape .direita { margin-left: auto; font-variant-numeric: tabular-nums; }
+/* One line, always: the screens get their height from what the footer leaves,
+   and a long message that wrapped shrank the chart while it was on screen. */
+#mensagem { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#rodape .direita { flex: none; margin-left: auto; font-variant-numeric: tabular-nums; }
 #mensagem.erro { color: var(--alerta); font-weight: 600; }
 
 /* uPlot in the house style. */
